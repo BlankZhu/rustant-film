@@ -1,14 +1,16 @@
 pub mod argument;
 pub mod config;
-pub mod info;
-pub mod layout;
+pub mod entity;
+pub mod film;
 
+use ab_glyph::FontVec;
 use clap::Parser;
 use exif::Reader;
-use log::{info, error};
+use film::{plot::{BottomPlotter, NormalPlotter, Plotter}, LogoCache};
 use image::ImageReader;
-use info::ExifInfo;
-use std::{fs::File, io::BufReader, env};
+use log::{info, error};
+use entity::ExifInfo;
+use std::{env, fs::File, io::{BufReader, Read}};
 
 fn set_default_log_level() {
     env::set_var("RUST_LOG", env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()));
@@ -28,6 +30,21 @@ fn main() {
             return;
         }
     };
+    // load input image
+    let image = match ImageReader::open(&args.input) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("cannot read file {}, cause: {}", args.input, e);
+            return;
+        }
+    };
+    let mut image = match image.decode() {
+        Ok(i) => i.to_rgb8(),
+        Err(e) => {
+            error!("cannot decode input image {}, cause: {}", args.input, e);
+            return;
+        }
+    };
 
     // parse raw EXIF infos
     let exif = match Reader::new().read_from_container(&mut BufReader::new(&file)) {
@@ -39,24 +56,46 @@ fn main() {
     };
     // parse main EXIF infos
     let exif_info = ExifInfo::new(&exif);
-    println!("exif info: {:?}", exif_info);
+    info!("exif info: {:?}", exif_info);
 
     // load logos from given directory
+    let mut logo_cache = LogoCache::new();
+    if let Err(e) = logo_cache.load(&args.logos) {
+        error!("cannot read logos from file {}, cause: {}", args.logos, e);
+        return;
+    }
 
-    work(args.input.as_str(), args.output.as_str()).unwrap();
-}
+    // create FontVec from font data
+    let mut file = match File::open(&args.font) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("cannot load font from file: {}, cause: {}", args.font, e);
+            return;
+        }
+    };
+    let mut font_data = Vec::new();
+    if let Err(e) = file.read_to_end(&mut font_data) {
+        error!("cannot read font file data from {}, cause: {}", args.font, e);
+        return;
+    }
+    let font = match FontVec::try_from_vec(font_data) {
+        Ok(font_vec) => font_vec,
+        Err(e) => {
+            error!("invalid font from {}, cause: {}", args.font, e);
+            return;
+        }
+    };
+    
+    // create plotter & plot
+    let plotter = NormalPlotter::new(logo_cache, font);
+    // let plotter = BottomPlotter::new(logo_cache, font);
+    if let Err(e) = plotter.plot(&mut image, &exif_info) {
+        error!("cannot plot image, cause: {}", e);
+        return;
+    }
 
-fn work(input_path: &str, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // load the exif info
-    let file = File::open(input_path)?;
-    let exif = Reader::new().read_from_container(&mut BufReader::new(&file))?;
-    let exif_info = ExifInfo::new(&exif);
-
-    // load the original image
-    let origin_image = ImageReader::open(input_path)?.decode()?;
-    let mut new_image = origin_image.to_rgb8();
-
-    layout::add_layout_alpha(&mut new_image, &exif_info)?;
-    new_image.save(output_path)?;
-    Ok(())
+    // save image
+    if let Err(e) = image.save(&args.output) {
+        error!("cannot save image to {}, cause: {}", args.output, e);
+    }
 }
