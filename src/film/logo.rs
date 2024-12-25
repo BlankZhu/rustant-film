@@ -1,7 +1,7 @@
 use std::{collections, error, fs};
 
 use image::{ImageReader, RgbImage};
-use log::info;
+use log::debug;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LogoCache {
@@ -20,7 +20,7 @@ impl LogoCache {
             if path.is_file() {
                 if let Some(filename) = path.file_stem() {
                     let logo_name = filename.to_string_lossy().to_ascii_lowercase();
-                    info!("logo name: {}", logo_name);
+                    debug!("logo name: {}", logo_name);
                     let logo_image = ImageReader::open(path)?.decode()?.to_rgb8();
                     self.cache.insert(logo_name, logo_image);
                 }

@@ -20,4 +20,7 @@ pub struct Arguments {
 
     #[arg(short, long, default_value = "./output.jpg")]
     pub output: String,
+
+    #[arg(short, long, default_value = "normal")]
+    pub plotter: String,
 }
