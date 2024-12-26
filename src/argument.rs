@@ -15,10 +15,10 @@ pub struct Arguments {
     #[arg(short, long, default_value = "./logos")]
     pub logos: String,
 
-    #[arg(short, long, default_value = "./input.jpg")]
+    #[arg(short, long, default_value = "./input")]
     pub input: String,
 
-    #[arg(short, long, default_value = "./output.jpg")]
+    #[arg(short, long, default_value = "./output")]
     pub output: String,
 
     #[arg(short, long, default_value = "normal")]

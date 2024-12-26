@@ -30,6 +30,12 @@ impl LogoCache {
     }
 
     pub fn get(&self, logo_name: &str) -> Option<&RgbImage> {
-        self.cache.get(&logo_name.to_ascii_lowercase())
+        debug!("checking logo name {}", logo_name);
+        for key in self.cache.keys() {
+            if logo_name.to_ascii_lowercase().contains(key) {
+                return self.cache.get(key);
+            }
+        }
+        None
     }
 }

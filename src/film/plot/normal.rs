@@ -102,14 +102,19 @@ impl Plotter for NormalPlotter {
             .chars()
             .filter(|&c| c != ' ')
             .collect();
-        let iso: String = exif_info
+        let mut iso: String = exif_info
             .iso
             .clone()
             .unwrap_or("".to_string())
             .chars()
             .filter(|&c| c != ' ')
             .collect();
-        let details = vec![focal_length, apreture, exposure, iso];
+        if !iso.is_empty() {
+            iso = format!("{}{}", "ISO", iso);
+        }
+        
+        let mut details = vec![focal_length, apreture, exposure, iso];
+        details.retain(|s| !s.is_empty());
         let detail_text_1 = details.join(" ");
         let detail_1_width: f32 = calculate_text_width(&detail_text_1, &self.font, &font_scale);
 
@@ -147,9 +152,9 @@ impl Plotter for NormalPlotter {
         add_vertical_line(
             image,
             width - detail_area_max_width as u32,
-            height + (standard_padding as f32 * 1.5 + font_height * 0.25) as u32,
-            (font_height * 1.5) as u32,
-            standard_padding / 64,
+            height + (standard_padding as f32 * 1.5 + font_height * 0.125) as u32,
+            (font_height * 1.75) as u32,
+            font_height as u32 / 32,
             &BLACK,
             &WHITE,
         );
@@ -163,7 +168,11 @@ impl Plotter for NormalPlotter {
         }
         let logo = logo.unwrap();
         let (logo_origin_width, logo_origin_height) = logo.dimensions();
-        let logo_new_height = font_height * 0.75;
+        let mut logo_new_height = font_height * 0.75;
+        if (logo_origin_width as f32 / logo_origin_height as f32) <= 1.5 {
+            // logo not too wide
+            logo_new_height = font_height * 1.5;
+        }
         let logo_new_width = logo_new_height * logo_origin_width as f32 / logo_origin_height as f32;
         let logo: ImageBuffer<Rgb<u8>, Vec<u8>> = resize(
             logo,

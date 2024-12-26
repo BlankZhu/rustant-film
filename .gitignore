@@ -1,4 +1,5 @@
 /target
-/resources
 /output
-test.*
+resources/
+debug.*
+output.jpg
