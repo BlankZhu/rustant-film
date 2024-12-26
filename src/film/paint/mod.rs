@@ -1,23 +1,25 @@
 pub mod bottom;
 pub mod constant;
 pub mod normal;
+pub mod horizontal;
+pub mod vertical;
 
 use std::error::Error;
 
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
-use constant::{BOTTOM_PLOTTER, NORMAL_PLOTTER};
+use constant::{BOTTOM_PAINTER, NORMAL_PAINTER};
 use image::{GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 
 use crate::entity::ExifInfo;
 
-pub use bottom::BottomPlotter;
-pub use normal::NormalPlotter;
+pub use bottom::BottomPainter;
+pub use normal::NormalPainter;
 
 use super::LogoCache;
 
-pub trait Plotter {
-    fn plot(&self, image: &mut RgbImage, exif_info: &ExifInfo) -> Result<(), Box<dyn Error>>;
+pub trait Painter {
+    fn paint(&self, image: &mut RgbImage, exif_info: &ExifInfo) -> Result<(), Box<dyn Error>>;
 }
 
 /// Add padding around the image.
@@ -162,10 +164,10 @@ fn calculate_text_width(text: &str, font: &impl Font, scale: &PxScale) -> f32 {
         .sum()
 }
 
-pub fn create_plotter(style: &str, cache: LogoCache, font: FontVec) -> Box<dyn Plotter> {
+pub fn create_painter(style: &str, cache: LogoCache, font: FontVec) -> Box<dyn Painter> {
     match style.to_ascii_lowercase().as_str() {
-        NORMAL_PLOTTER => Box::new(NormalPlotter::new(cache, font)),
-        BOTTOM_PLOTTER => Box::new(BottomPlotter::new(cache, font)),
-        _ => Box::new(NormalPlotter::new(cache, font)),
+        NORMAL_PAINTER => Box::new(NormalPainter::new(cache, font)),
+        BOTTOM_PAINTER => Box::new(BottomPainter::new(cache, font)),
+        _ => Box::new(NormalPainter::new(cache, font)),
     }
 }

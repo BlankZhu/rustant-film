@@ -22,5 +22,5 @@ pub struct Arguments {
     pub output: String,
 
     #[arg(short, long, default_value = "normal")]
-    pub plotter: String,
+    pub painter: String,
 }

@@ -10,22 +10,22 @@ use crate::film::LogoCache;
 use super::{
     add_padding, add_text, add_vertical_line, calculate_text_width,
     constant::{BLACK, GRAY, WHITE},
-    Plotter,
+    Painter,
 };
 
-pub struct BottomPlotter {
+pub struct BottomPainter {
     cache: LogoCache,
     font: FontVec,
 }
 
-impl BottomPlotter {
+impl BottomPainter {
     pub fn new(cache: LogoCache, font: FontVec) -> Self {
-        BottomPlotter { cache, font }
+        BottomPainter { cache, font }
     }
 }
 
-impl Plotter for BottomPlotter {
-    fn plot(
+impl Painter for BottomPainter {
+    fn paint(
         &self,
         image: &mut image::RgbImage,
         exif_info: &crate::entity::ExifInfo,

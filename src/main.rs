@@ -6,7 +6,7 @@ pub mod film;
 use ab_glyph::FontVec;
 use clap::Parser;
 use exif::Reader;
-use film::{plot::create_plotter, LogoCache};
+use film::{paint::create_painter, LogoCache};
 use image::ImageReader;
 use log::{error, info, warn};
 use entity::ExifInfo;
@@ -50,8 +50,8 @@ fn main() {
         }
     };
     
-    // create plotter
-    let plotter = create_plotter(&args.plotter, logo_cache, font);
+    // create painter
+    let painter = create_painter(&args.painter, logo_cache, font);
 
     // check output directory
     let output_directory_path = Path::new(&args.output);
@@ -117,7 +117,7 @@ fn main() {
         };
 
         // plot the image
-        if let Err(e) = plotter.plot(&mut image, &exif_info) {
+        if let Err(e) = painter.paint(&mut image, &exif_info) {
             error!("cannot plot image {}, cause: {}", path.display(), e);
             continue;
         }

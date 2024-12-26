@@ -1,4 +1,4 @@
-pub mod plot;
+pub mod paint;
 pub mod logo;
 
 pub use logo::LogoCache;

@@ -10,22 +10,22 @@ use crate::film::LogoCache;
 use super::{
     add_padding, add_text, add_vertical_line, calculate_text_width,
     constant::{BLACK, GRAY, WHITE},
-    Plotter,
+    Painter,
 };
 
-pub struct NormalPlotter {
+pub struct NormalPainter {
     cache: LogoCache,
     font: FontVec,
 }
 
-impl NormalPlotter {
+impl NormalPainter {
     pub fn new(cache: LogoCache, font: FontVec) -> Self {
-        NormalPlotter { cache, font }
+        NormalPainter { cache, font }
     }
 }
 
-impl Plotter for NormalPlotter {
-    fn plot(
+impl Painter for NormalPainter {
+    fn paint(
         &self,
         image: &mut image::RgbImage,
         exif_info: &crate::entity::ExifInfo,
