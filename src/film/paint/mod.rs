@@ -1,17 +1,22 @@
+pub mod blank;
 pub mod constant;
+pub mod duel;
 pub mod triangular;
 
 use std::error::Error;
 
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
-use constant::TRIANGLULAR_PAINTER;
+use constant::{BLANK_PAINTER, TRIANGLULAR_PAINTER};
 use image::{GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use triangular::TriangularPainter;
+use blank::BlankPainter;
+use duel::DuelPainter;
 
-use crate::entity::{ExifInfo, Padding, Position};
-
-use super::LogoCache;
+use crate::{
+    entity::{ExifInfo, Padding, Position},
+    LogoCache,
+};
 
 pub trait Painter {
     fn paint(&self, image: &mut RgbImage, exif_info: &ExifInfo) -> Result<(), Box<dyn Error>>;
@@ -171,8 +176,21 @@ pub fn create_painter(
                 main_position.unwrap_or(Position::BOTTOM),
                 pad_around,
             )),
+            BLANK_PAINTER => Box::new(BlankPainter::new(
+                pad_around,
+            )),
             _ => Box::new(TriangularPainter::new_normal(cache, font)),
         },
         None => Box::new(TriangularPainter::new_normal(cache, font)),
     }
+}
+
+pub fn create_canvas(width: u32, height: u32, color: Rgb<u8>) -> RgbImage {
+    let mut canvas = RgbImage::new(width, height);
+    for y in 0..height {
+        for x in 0..width {
+            canvas.put_pixel(x, y, color);
+        }
+    }
+    canvas
 }

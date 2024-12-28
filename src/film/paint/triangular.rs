@@ -11,7 +11,7 @@ use crate::{
         paint::{
             add_padding, add_text, add_vertical_line,
             constant::{BLACK, GOLDEN_RATIO, GRAY, WHITE},
-            get_text_scaled_length, Painter,
+            create_canvas, get_text_scaled_length, Painter,
         },
         LogoCache,
     },
@@ -93,16 +93,6 @@ impl TriangularPainter {
         exif_info.datetime.clone().unwrap_or("".to_string())
     }
 
-    fn create_cavans(&self, width: u32, height: u32, color: Rgb<u8>) -> RgbImage {
-        let mut canvas = RgbImage::new(width, height);
-        for y in 0..height {
-            for x in 0..width {
-                canvas.put_pixel(x, y, color);
-            }
-        }
-        canvas
-    }
-
     ///
     /// The layout of main content canvas is like:
     ///
@@ -147,7 +137,7 @@ impl TriangularPainter {
         );
 
         // create canvas for main content
-        let mut canvas = self.create_cavans(width, height, background);
+        let mut canvas = create_canvas(width, height, background);
 
         // print lines on the left
         debug!("paint main text to the left");
@@ -265,7 +255,7 @@ impl TriangularPainter {
             .unwrap_or(1);
 
         // create the canvas
-        let mut canvas = self.create_cavans(width, height, background);
+        let mut canvas = create_canvas(width, height, background);
 
         // print lines on it
         let mut index: u32 = 0;
