@@ -9,18 +9,30 @@ use clap::Parser;
 )]
 pub struct Arguments {
     /// filename to font to use
-    #[arg(short, long, default_value = "font.ttf")]
+    #[arg(short, long, default_value = "font.ttf", help = "filename to font to use")]
     pub font: String,
 
-    #[arg(short, long, default_value = "./logos")]
+    /// path to directory that holds all the logos
+    #[arg(short, long, default_value = "./logos", help = "path to directory that holds all the logos")]
     pub logos: String,
 
-    #[arg(short, long, default_value = "./input")]
+    /// path to directory which stores the origin images
+    #[arg(short, long, default_value = "./input", help = "path to directory which stores the origin images")]
     pub input: String,
 
-    #[arg(short, long, default_value = "./output")]
+    /// path to directory where the outcomes will be stored
+    #[arg(short, long, default_value = "./output", help = "path to directory where the outcomes will be stored")]
     pub output: String,
 
-    #[arg(short, long, default_value = "normal")]
-    pub painter: String,
+    /// painter that defines the instant-film layout
+    #[arg(short, long, default_value = None, help = "optional, painter that defines the instant-film layout, use `tri-angular` as default")]
+    pub painter: Option<String>,
+
+    /// whether add all paddings around the image
+    #[arg(long = "pos", default_value = None, help = "optional, where to paint the description content, use [ top/ bottom / left / right / middle ] (t/b/l/r/m for short). For some special painter this won't work, and different painter has their own implementation.")]
+    pub position: Option<String>,
+
+    /// whether add all paddings around the image
+    #[arg(long = "pad", action = clap::ArgAction::SetTrue, help = "whether add paddings around the image")]
+    pub padding: bool,
 }

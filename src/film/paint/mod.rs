@@ -1,20 +1,15 @@
-pub mod bottom;
 pub mod constant;
-pub mod normal;
-pub mod horizontal;
-pub mod vertical;
+pub mod triangular;
 
 use std::error::Error;
 
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
-use constant::{BOTTOM_PAINTER, NORMAL_PAINTER};
+use constant::TRIANGLULAR_PAINTER;
 use image::{GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
+use triangular::TriangularPainter;
 
-use crate::entity::ExifInfo;
-
-pub use bottom::BottomPainter;
-pub use normal::NormalPainter;
+use crate::entity::{ExifInfo, Padding, Position};
 
 use super::LogoCache;
 
@@ -41,15 +36,12 @@ pub trait Painter {
 /// - `color`: color of the padding space
 fn add_padding(
     image: &mut RgbImage,
-    top: u32,
-    bottom: u32,
-    left: u32,
-    right: u32,
+    padding: &Padding,
     color: &Rgb<u8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (width, height) = image.dimensions();
-    let new_width = width + left + right;
-    let new_height = height + top + bottom;
+    let new_width = width + padding.left + padding.right;
+    let new_height = height + padding.top + padding.bottom;
 
     let mut new_image: RgbImage = ImageBuffer::new(new_width, new_height);
     for x in 0..new_width {
@@ -58,7 +50,7 @@ fn add_padding(
         }
     }
 
-    new_image.copy_from(image, left, top)?;
+    new_image.copy_from(image, padding.left, padding.top)?;
     *image = new_image;
     Ok(())
 }
@@ -157,17 +149,30 @@ fn add_vertical_line(
 ///
 /// # Returns
 /// - Returns the width of the final plotted text in pixel.
-fn calculate_text_width(text: &str, font: &impl Font, scale: &PxScale) -> f32 {
+fn get_text_scaled_length(text: &str, font: &impl Font, scale: &PxScale) -> u32 {
     let scaled_font = font.as_scaled(*scale);
     text.chars()
         .map(|c| scaled_font.h_advance(font.glyph_id(c)))
-        .sum()
+        .sum::<f32>() as u32
 }
 
-pub fn create_painter(style: &str, cache: LogoCache, font: FontVec) -> Box<dyn Painter> {
-    match style.to_ascii_lowercase().as_str() {
-        NORMAL_PAINTER => Box::new(NormalPainter::new(cache, font)),
-        BOTTOM_PAINTER => Box::new(BottomPainter::new(cache, font)),
-        _ => Box::new(NormalPainter::new(cache, font)),
+pub fn create_painter(
+    painter_type: Option<String>,
+    font: FontVec,
+    cache: LogoCache,
+    main_position: Option<Position>,
+    pad_around: bool,
+) -> Box<dyn Painter> {
+    match painter_type {
+        Some(pt) => match pt.to_lowercase().as_str() {
+            TRIANGLULAR_PAINTER => Box::new(TriangularPainter::new(
+                cache,
+                font,
+                main_position.unwrap_or(Position::BOTTOM),
+                pad_around,
+            )),
+            _ => Box::new(TriangularPainter::new_normal(cache, font)),
+        },
+        None => Box::new(TriangularPainter::new_normal(cache, font)),
     }
 }

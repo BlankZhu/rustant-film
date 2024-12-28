@@ -39,13 +39,16 @@ For a more detailed guide on preparing media resources, refer to [here](./setup-
 
 Currently, `rustant-film` supports the following layouts:
 
-- `normal`: A traditional instant film layout with padding around the content and EXIF information displayed below.
-- `bottom`: Similar to `normal`, but with padding only at the bottom.
-
-By default, the `normal` layout is used if no layout is specified. To select a different layout, use the `-p` option:
+- `triangle`: A traditional instant film layout with EXIF information displayed below.
 
 ```shell
-./target/release/rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p bottom
+./target/release/rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle
+```
+
+For a more classic instant film style, add padding around by using flag `-pad`:
+
+```shell
+./target/release/rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle -pad
 ```
 
 ## Roadmap

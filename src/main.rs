@@ -5,15 +5,23 @@ pub mod film;
 
 use ab_glyph::FontVec;
 use clap::Parser;
+use entity::{position, ExifInfo};
 use exif::Reader;
 use film::{paint::create_painter, LogoCache};
 use image::ImageReader;
 use log::{error, info, warn};
-use entity::ExifInfo;
-use std::{env, fs::{self, File}, io::{BufReader, Read}, path::Path};
+use std::{
+    env,
+    fs::{self, File},
+    io::{BufReader, Read},
+    path::Path,
+};
 
 fn set_default_log_level() {
-    env::set_var("RUST_LOG", env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()));
+    env::set_var(
+        "RUST_LOG",
+        env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
+    );
     pretty_env_logger::env_logger::init();
 }
 
@@ -39,7 +47,10 @@ fn main() {
     };
     let mut font_data = Vec::new();
     if let Err(e) = file.read_to_end(&mut font_data) {
-        error!("cannot read font file data from {}, cause: {}", args.font, e);
+        error!(
+            "cannot read font file data from {}, cause: {}",
+            args.font, e
+        );
         return;
     }
     let font = match FontVec::try_from_vec(font_data) {
@@ -49,9 +60,15 @@ fn main() {
             return;
         }
     };
-    
+
     // create painter
-    let painter = create_painter(&args.painter, logo_cache, font);
+    let painter = create_painter(
+        args.painter,
+        font,
+        logo_cache,
+        position::from_str(args.position.unwrap_or("".to_string()).as_str()),
+        args.padding,
+    );
 
     // check output directory
     let output_directory_path = Path::new(&args.output);
@@ -93,7 +110,11 @@ fn main() {
         let exif = match Reader::new().read_from_container(&mut BufReader::new(&file)) {
             Ok(exif) => exif,
             Err(e) => {
-                warn!("cannot read EXIF from file {}, cause: {}", path.display(), e);
+                warn!(
+                    "cannot read EXIF from file {}, cause: {}",
+                    path.display(),
+                    e
+                );
                 continue;
             }
         };

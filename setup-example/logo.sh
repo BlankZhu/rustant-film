@@ -21,7 +21,9 @@ wget https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Fujifilm_logo.svg
 wget https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Lumix_logo.svg/2560px-Lumix_logo.svg.png -O ./resources/logos/panasonic.png
 
 # get olympus logo
-# wget https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Olympus_Corporation_logo.svg/2560px-Olympus_Corporation_logo.svg.png -O ./resources/logos/olympus.png
+wget https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Olympus_Corporation_logo.svg/2560px-Olympus_Corporation_logo.svg.png -O ./resources/logos/olympus.png
+
+# get om digital solutions logo
 wget https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/OM_Digital_Solutions_Logo.svg/2560px-OM_Digital_Solutions_Logo.svg.png -O './resources/logos/om ditital solutions.png'
 
 # get leica logo
