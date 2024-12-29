@@ -67,7 +67,7 @@ After completing the preparation steps, your `resources` directory should look l
 │   ├── ...
 │   ├── ttf
 │   │   ├── ...
-│   │   └── FiraCode-Regular.ttf
+│   │   └── FiraCode-SemiBold.ttf
 │   └── ...
 ├── logos
 │   ├── apple.jpg
@@ -84,7 +84,7 @@ If you are in a Rust development environment, use the following command:
 
 ```shell
 # Run from the repository's base directory
-cargo run -- -i ./setup-example/resources/samples/ -o ./output -l ./setup-example/resources/logos/ -f ./setup-example/resources/font/FiraCode-Regular.ttf -p normal
+cargo run -- -i ./setup-example/resources/samples/ -o ./output -l ./setup-example/resources/logos/ -f ./setup-example/resources/font/FiraCode-SemiBold.ttf -p normal
 ```
 
 The output will be saved in the `./output` directory.
@@ -96,7 +96,7 @@ Ensure you have built the binary using `cargo run`. Then, execute:
 ```shell
 # Start from the repository's base directory
 cd ./setup-example
-rustant-film -i ./resources/samples/ -o ./output -l ./resources/logos/ -f ./resources/font/FiraCode-Regular.ttf -p normal
+rustant-film -i ./resources/samples/ -o ./output -l ./resources/logos/ -f ./resources/font/FiraCode-SemiBold.ttf -p normal
 ```
 
 The processed images will be saved in the `./output` directory.

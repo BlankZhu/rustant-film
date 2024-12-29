@@ -28,7 +28,7 @@ This will generate example fonts, logos, and a sample photo under the `./resourc
 Finally, run the following command:
 
 ```shell
-./target/release/rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos
+./target/release/rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-SemiBold.ttf -l ./resources/logos
 ```
 
 The output will be saved in the `./output` directory.
@@ -40,15 +40,22 @@ For a more detailed guide on preparing media resources, refer to [here](./setup-
 Currently, `rustant-film` supports the following layouts:
 
 - `triangle`: A traditional instant film layout with EXIF information displayed below.
+- `blank`: A raw instant film with only blank paddings, no extra info added.
 
 ```shell
-./target/release/rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle
+./rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle
 ```
 
 For a more classic instant film style, add padding around by using flag `-pad`:
 
 ```shell
-./target/release/rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle -pad
+./rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle --pad
+```
+
+Some layout may use a sub-font to get a better look. To use a sub-font, use `--sub-font`:
+
+```shell
+./rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-SemiBold.ttf --sub-font ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle --pad
 ```
 
 ## Roadmap

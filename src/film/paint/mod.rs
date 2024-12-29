@@ -6,12 +6,12 @@ pub mod triangular;
 use std::error::Error;
 
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
-use constant::{BLANK_PAINTER, TRIANGLULAR_PAINTER};
+use blank::BlankPainter;
+use constant::{BLANK_PAINTER, DUEL_PAINTER, TRIANGLULAR_PAINTER};
+use duel::DuelPainter;
 use image::{GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
 use triangular::TriangularPainter;
-use blank::BlankPainter;
-use duel::DuelPainter;
 
 use crate::{
     entity::{ExifInfo, Padding, Position},
@@ -164,6 +164,7 @@ fn get_text_scaled_length(text: &str, font: &impl Font, scale: &PxScale) -> u32 
 pub fn create_painter(
     painter_type: Option<String>,
     font: FontVec,
+    sub_font: Option<FontVec>,
     cache: LogoCache,
     main_position: Option<Position>,
     pad_around: bool,
@@ -173,10 +174,16 @@ pub fn create_painter(
             TRIANGLULAR_PAINTER => Box::new(TriangularPainter::new(
                 cache,
                 font,
+                sub_font,
                 main_position.unwrap_or(Position::BOTTOM),
                 pad_around,
             )),
-            BLANK_PAINTER => Box::new(BlankPainter::new(
+            BLANK_PAINTER => Box::new(BlankPainter::new(pad_around)),
+            DUEL_PAINTER => Box::new(DuelPainter::new(
+                cache,
+                font,
+                sub_font,
+                main_position.unwrap_or(Position::RIGHT),
                 pad_around,
             )),
             _ => Box::new(TriangularPainter::new_normal(cache, font)),

@@ -8,9 +8,13 @@ use clap::Parser;
     about = "Add a instant film style layout to your EXIF photo."
 )]
 pub struct Arguments {
-    /// filename to font to use
+    /// filename to main font to use
     #[arg(short, long, default_value = "font.ttf", help = "filename to font to use")]
     pub font: String,
+
+    /// filename to sub font to use
+    #[arg(long = "sub-font", default_value = None, help = "optional, filename to sub font to use")]
+    pub sub_font: Option<String>,
 
     /// path to directory that holds all the logos
     #[arg(short, long, default_value = "./logos", help = "path to directory that holds all the logos")]

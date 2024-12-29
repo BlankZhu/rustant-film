@@ -21,3 +21,4 @@ pub const POSITION_RIGHT_SHORT: &str = "r";
 // should remove the following constants
 pub const TRIANGLULAR_PAINTER: &str = "triangular";
 pub const BLANK_PAINTER: &str = "blank";
+pub const DUEL_PAINTER: &str = "duel";

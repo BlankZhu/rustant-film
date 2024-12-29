@@ -20,15 +20,17 @@ use crate::{
 pub struct TriangularPainter {
     cache: LogoCache,
     font: FontVec,
+    sub_font: Option<FontVec>,
     main_position: Position,
     pad_around: bool,
 }
 
 impl TriangularPainter {
-    pub fn new(cache: LogoCache, font: FontVec, main_position: Position, pad_around: bool) -> Self {
+    pub fn new(cache: LogoCache, font: FontVec, sub_font: Option<FontVec>, main_position: Position, pad_around: bool) -> Self {
         TriangularPainter {
             cache,
             font,
+            sub_font,
             main_position,
             pad_around,
         }
@@ -38,6 +40,7 @@ impl TriangularPainter {
         TriangularPainter {
             cache,
             font,
+            sub_font: None,
             main_position: Position::BOTTOM,
             pad_around: true,
         }
@@ -147,6 +150,7 @@ impl TriangularPainter {
             let text_canvas = self.create_text_canvas_with_emphasized_first_line(
                 &vec![lens_model_text, camera_model_text],
                 &self.font,
+                &self.sub_font,
                 font_scale,
                 Position::LEFT,
                 background,
@@ -164,6 +168,7 @@ impl TriangularPainter {
             let text_canvas = self.create_text_canvas_with_emphasized_first_line(
                 &vec![shooting_parameters_text, datetime_text],
                 &self.font,
+                &self.sub_font,
                 font_scale,
                 Position::RIGHT,
                 background,
@@ -234,6 +239,7 @@ impl TriangularPainter {
         &self,
         lines: &Vec<String>,
         font: &FontVec,
+        sub_font: &Option<FontVec>,
         scale: &PxScale,
         align: Position,
         background: Rgb<u8>,
@@ -264,6 +270,11 @@ impl TriangularPainter {
                 0 => &BLACK,
                 _ => &GRAY,
             };
+            let font_to_use = match index {
+                0 => font,
+                _ => sub_font.as_ref().unwrap_or(font),
+            };
+
 
             let mut x = 0;
             let y = index * (scaled_font.height() as u32);
@@ -271,12 +282,12 @@ impl TriangularPainter {
             // adjust x position if align to right
             if align == Position::RIGHT {
                 // get rendered length of current line
-                let line_width = get_text_scaled_length(line, font, scale);
+                let line_width = get_text_scaled_length(line, font_to_use, scale);
                 x = width - line_width;
             }
 
             // paint the lines to canvas
-            add_text(&mut canvas, x, y, &line, scale, font, color);
+            add_text(&mut canvas, x, y, &line, scale, font_to_use, color);
             index += 1;
         }
 
@@ -312,18 +323,15 @@ impl Painter for TriangularPainter {
 
         // add padding
         debug!("painting paddings...");
-        if self.main_position == Position::BOTTOM {
-            add_padding(image, &padding, &WHITE)?;
-        } else {
-            // use padding on top
+        if self.main_position == Position::TOP {
             padding = Padding::new(
                 main_padding,
                 trivial_padding,
                 trivial_padding,
                 trivial_padding,
             );
-            add_padding(image, &padding, &WHITE)?;
         }
+        add_padding(image, &padding, &WHITE)?;
 
         // prepare the font
         let font_size = standard_padding as f32 * 0.5; // for both height & width
@@ -356,10 +364,10 @@ impl Painter for TriangularPainter {
         )?;
 
         // put main content canvas back
-        if self.main_position == Position::BOTTOM {
-            image.copy_from(&main_content_canvas, 0, ori_height + padding.top)?;
-        } else {
+        if self.main_position == Position::TOP {
             image.copy_from(&main_content_canvas, 0, 0)?;
+        } else {
+            image.copy_from(&main_content_canvas, 0, ori_height + padding.top)?;
         }
 
         Ok(())

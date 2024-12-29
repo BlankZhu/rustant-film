@@ -4,6 +4,7 @@ pub mod entity;
 pub mod film;
 
 use ab_glyph::FontVec;
+use argument::Arguments;
 use clap::Parser;
 use entity::{position, ExifInfo};
 use exif::Reader;
@@ -25,11 +26,21 @@ fn set_default_log_level() {
     pretty_env_logger::env_logger::init();
 }
 
-fn main() {
-    let args = argument::Arguments::parse();
-    set_default_log_level();
-    info!("using input arguments: {:?}", args);
+fn read_font_data(filename: &str) -> Result<FontVec, Box<dyn std::error::Error>> {
+    let mut file = File::open(filename)?;
+    let mut font_data = Vec::new();
+    file.read_to_end(&mut font_data)?;
+    Ok(FontVec::try_from_vec(font_data)?)
+}
 
+fn read_sub_font_data(filename: &str) -> Option<FontVec> {
+    let mut file = File::open(filename).ok()?;
+    let mut font_data = Vec::new();
+    file.read_to_end(&mut font_data).ok()?;
+    Some(FontVec::try_from_vec(font_data).ok()?)
+}
+
+fn work(args: Arguments) {
     // load logos from given directory
     let mut logo_cache = LogoCache::new();
     if let Err(e) = logo_cache.load(&args.logos) {
@@ -37,34 +48,23 @@ fn main() {
         return;
     }
 
-    // create FontVec from font data
-    let mut file = match File::open(&args.font) {
+    // load the main font
+    let font = match read_font_data(&args.font) {
         Ok(f) => f,
         Err(e) => {
             error!("cannot load font from file: {}, cause: {}", args.font, e);
             return;
         }
     };
-    let mut font_data = Vec::new();
-    if let Err(e) = file.read_to_end(&mut font_data) {
-        error!(
-            "cannot read font file data from {}, cause: {}",
-            args.font, e
-        );
-        return;
-    }
-    let font = match FontVec::try_from_vec(font_data) {
-        Ok(font_vec) => font_vec,
-        Err(e) => {
-            error!("invalid font from {}, cause: {}", args.font, e);
-            return;
-        }
-    };
+
+    // load the sub font
+    let sub_font = args.sub_font.map_or(None, |sf| read_sub_font_data(&sf));
 
     // create painter
     let painter = create_painter(
         args.painter,
         font,
+        sub_font,
         logo_cache,
         position::from_str(args.position.unwrap_or("".to_string()).as_str()),
         args.padding,
@@ -156,4 +156,11 @@ fn main() {
             error!("cannot save image to {}, cause: {}", output_filename, e);
         }
     }
+}
+
+fn main() {
+    let args = Arguments::parse();
+    set_default_log_level();
+    info!("using input arguments: {:?}", args);
+    work(args);
 }
