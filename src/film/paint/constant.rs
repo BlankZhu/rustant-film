@@ -22,3 +22,4 @@ pub const POSITION_RIGHT_SHORT: &str = "r";
 pub const TRIANGLULAR_PAINTER: &str = "triangular";
 pub const BLANK_PAINTER: &str = "blank";
 pub const DUEL_PAINTER: &str = "duel";
+pub const DIAGONAL_PAINTER: &str = "diagonal";

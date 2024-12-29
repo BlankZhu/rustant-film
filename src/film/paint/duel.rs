@@ -25,6 +25,7 @@ pub struct DuelPainter {
     font: FontVec,
     sub_font: Option<FontVec>,
     main_position: Position,
+    diagonal: bool,
     pad_around: bool,
 }
 
@@ -34,6 +35,7 @@ impl DuelPainter {
         font: FontVec,
         sub_font: Option<FontVec>,
         main_position: Position,
+        diagonal: bool,
         pad_around: bool,
     ) -> Self {
         DuelPainter {
@@ -41,6 +43,7 @@ impl DuelPainter {
             font,
             sub_font,
             main_position,
+            diagonal,
             pad_around,
         }
     }
@@ -51,6 +54,7 @@ impl DuelPainter {
             font,
             sub_font: None,
             main_position: Position::RIGHT,
+            diagonal: false,
             pad_around: false,
         }
     }
@@ -121,7 +125,7 @@ impl DuelPainter {
         vec![camera_model, lens_model, detail, copyright]
     }
 
-    pub fn create_content_canvas(
+    pub fn create_main_content_canvas(
         &self,
         exif_info: &ExifInfo,
         font: &FontVec,
@@ -133,7 +137,7 @@ impl DuelPainter {
         let lines = self.get_lines(exif_info);
 
         // calculate the min width & height for the lines
-        let lines_height = (lines.len() + 1) as u32 * base_scale.y as u32;  // +1 for a extra line space to tell logo & lines apart
+        let lines_height = (lines.len() + 1) as u32 * base_scale.y as u32; // +1 for a extra line space to tell logo & lines apart
         let lines_width = lines
             .iter()
             .map(|line| get_text_scaled_length(line, font, base_scale))
@@ -161,7 +165,10 @@ impl DuelPainter {
         // create a canvas that holds the lines & logo
         let canvas_width = std::cmp::max(lines_width, logo_width);
         let canvas_height = lines_height + logo_height;
-        debug!("content canvas width: {}, height: {}", canvas_width, canvas_height);
+        debug!(
+            "content canvas width: {}, height: {}",
+            canvas_width, canvas_height
+        );
         let mut canvas = create_canvas(canvas_width, canvas_height, background);
 
         // print logo
@@ -214,31 +221,6 @@ impl DuelPainter {
 
         Ok(canvas)
     }
-
-    pub fn create_main_content_canvas(
-        &self,
-        height: u32,
-        exif_info: &ExifInfo,
-        font_scale: &PxScale,
-        padding: &Padding,
-        background: Rgb<u8>,
-    ) -> Result<RgbImage, Box<dyn std::error::Error>> {
-        // get the content canvas
-        let content = self.create_content_canvas(
-            exif_info,
-            &self.font,
-            &self.sub_font,
-            font_scale,
-            background,
-        )?;
-        let width = content.width() + padding.left + padding.right;
-
-        // get the main canvas
-        let mut canvas = create_canvas(width, height, background);
-        canvas.copy_from(&content, padding.left, (height - content.height()) / 2)?;
-
-        Ok(canvas)
-    }
 }
 
 impl Painter for DuelPainter {
@@ -267,40 +249,70 @@ impl Painter for DuelPainter {
         };
 
         // create a new main content canvas
-        let main_content_canvas_padding =
-            Padding::new(0, 0, standard_padding, standard_padding);
         let main_content_canvas = self.create_main_content_canvas(
-            ori_height + trivial_padding * 2,
             exif_info,
+            &self.font,
+            &self.sub_font,
             &font_scale,
-            &main_content_canvas_padding,
             WHITE,
         )?;
 
-        // setup padding around the image
+        // setup padding around the origin image
         let mut padding = Padding::new(
             trivial_padding,
             trivial_padding,
             trivial_padding,
-            main_content_canvas.width(),
+            main_content_canvas.width() + standard_padding * 2,
         );
         if self.main_position == Position::LEFT {
             padding = Padding::new(
                 trivial_padding,
                 trivial_padding,
-                main_content_canvas.width(),
+                main_content_canvas.width() + standard_padding * 2,
                 trivial_padding,
             );
         }
         add_padding(image, &padding, &WHITE)?;
 
-        // move the main content into image's padding
+        // put the main content into the image
+        let mut copy_to_x: u32 = standard_padding;
+        let copy_to_y: u32;
 
-        if self.main_position == Position::LEFT {
-            image.copy_from(&main_content_canvas, 0, 0)?;
-        } else {
-            image.copy_from(&main_content_canvas, ori_width + padding.left, 0)?;
-        }
+        match (self.main_position, self.diagonal) {
+            (Position::LEFT, true) => {
+                // left-top
+                copy_to_y = padding.top + standard_padding * 2;
+            }
+            (Position::LEFT, false) => {
+                // left middle
+                copy_to_y = (image.height() - main_content_canvas.height()) / 2;
+            }
+            (_, true) => {
+                // right bottom
+                copy_to_x = (image.width() - padding.right)
+                    + (padding.right - main_content_canvas.width()) / 2;
+                copy_to_y = image.height() - padding.bottom - standard_padding * 2 - main_content_canvas.height();
+            }
+            (_, false) => {
+                // right middle
+                copy_to_x = (image.width() - padding.right)
+                    + (padding.right - main_content_canvas.width()) / 2;
+                copy_to_y = (image.height() - main_content_canvas.height()) / 2;
+            }
+        };
+
+        debug!(
+            "new image width: {}, height: {}",
+            image.width(),
+            image.width()
+        );
+        debug!("copy to x: {}, y: {}", copy_to_x, copy_to_y);
+        debug!(
+            "main content width: {}, height: {}",
+            main_content_canvas.width(),
+            main_content_canvas.height()
+        );
+        image.copy_from(&main_content_canvas, copy_to_x, copy_to_y)?;
 
         Ok(())
     }

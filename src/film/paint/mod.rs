@@ -7,7 +7,7 @@ use std::error::Error;
 
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
 use blank::BlankPainter;
-use constant::{BLANK_PAINTER, DUEL_PAINTER, TRIANGLULAR_PAINTER};
+use constant::{BLANK_PAINTER, DIAGONAL_PAINTER, DUEL_PAINTER, TRIANGLULAR_PAINTER};
 use duel::DuelPainter;
 use image::{GenericImage, ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_text_mut;
@@ -184,6 +184,15 @@ pub fn create_painter(
                 font,
                 sub_font,
                 main_position.unwrap_or(Position::RIGHT),
+                false,
+                pad_around,
+            )),
+            DIAGONAL_PAINTER => Box::new(DuelPainter::new(
+                cache,
+                font,
+                sub_font,
+                main_position.unwrap_or(Position::RIGHT),
+                true,
                 pad_around,
             )),
             _ => Box::new(TriangularPainter::new_normal(cache, font)),
