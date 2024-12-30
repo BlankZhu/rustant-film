@@ -291,7 +291,10 @@ impl Painter for DuelPainter {
                 // right bottom
                 copy_to_x = (image.width() - padding.right)
                     + (padding.right - main_content_canvas.width()) / 2;
-                copy_to_y = image.height() - padding.bottom - standard_padding * 2 - main_content_canvas.height();
+                copy_to_y = image.height()
+                    - padding.bottom
+                    - standard_padding * 2
+                    - main_content_canvas.height();
             }
             (_, false) => {
                 // right middle
