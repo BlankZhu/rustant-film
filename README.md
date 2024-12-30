@@ -69,6 +69,7 @@ Some layout may use a sub-font to get a better look. To use a sub-font, use `--s
 - `Watermark`: Adds watermarks, including invisible ones, to processed photos.
 - `Copyright Support`: Allows users to add custom copyright information, such as the artist's name, to the final photo.
 - `HTTP API`: Hosts the `rustant-film` command as an HTTP API server, providing both synchronous and asynchronous APIs.
+- `GUI`: Add a GUI for `rustant-film`, maybe as a new project.
 - `Container Image`: Distributes the `rustant-film` command-line tool and HTTP API as a container image.
 - `Cargo Binary Publishing`: Publishes the `rustant-film` command as a binary on crates.io.
 - `Lens Logo Support`: Some layouts may include lens logos.
