@@ -75,7 +75,8 @@ After completing the preparation steps, your `resources` directory should look l
 │   ├── ...
 │   └── sony.jpg
 └── samples
-    └── Ducati749.jpg
+    ├── ...
+    └── IMAGE.jpg
 ```
 
 ### Running with Cargo

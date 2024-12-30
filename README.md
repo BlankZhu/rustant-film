@@ -81,6 +81,8 @@ Some layout may use a sub-font to get a better look. To use a sub-font, use `--s
 
 ### Sample Images
 
+`rustant-film` will add instant film layout to the following images in showcase.
+
 - "[Dahlia-in-bloom](https://commons.wikimedia.org/wiki/File:Dahlia-in-bloom.jpg)" by Changku88, used under CC BY-SA 4.0. <!-- Apple -->
 - "[Kranhäuser Cologne, April 2018-01](https://commons.wikimedia.org/wiki/File:Kranh%C3%A4user_Cologne,_April_2018_-01.jpg)" by Martin Falbisoner, used under CC BY-SA 4.0. <!-- Canon -->
 - "[Dendermonde town hall and belfry during golden hour](https://commons.wikimedia.org/wiki/File:Dendermonde_town_hall_and_belfry_during_golden_hour_(DSCF0501).jpg)" by Trougnouf, used under CC BY-SA 4.0. <!-- Fujifilm -->
