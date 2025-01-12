@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ab_glyph::{FontVec, PxScale};
 use image::{
     imageops::{resize, FilterType},
@@ -21,9 +23,9 @@ use super::Painter;
 
 /// actually, a flow (L-R) painter
 pub struct DuelPainter {
-    cache: LogoCache,
-    font: FontVec,
-    sub_font: Option<FontVec>,
+    cache: Arc<LogoCache>,
+    font: Arc<FontVec>,
+    sub_font: Arc<Option<FontVec>>,
     main_position: Position,
     diagonal: bool,
     pad_around: bool,
@@ -31,9 +33,9 @@ pub struct DuelPainter {
 
 impl DuelPainter {
     pub fn new(
-        cache: LogoCache,
-        font: FontVec,
-        sub_font: Option<FontVec>,
+        cache: Arc<LogoCache>,
+        font: Arc<FontVec>,
+        sub_font: Arc<Option<FontVec>>,
         main_position: Position,
         diagonal: bool,
         pad_around: bool,
@@ -48,11 +50,11 @@ impl DuelPainter {
         }
     }
 
-    pub fn new_normal(cache: LogoCache, font: FontVec) -> Self {
+    pub fn new_normal(cache: Arc<LogoCache>, font: Arc<FontVec>) -> Self {
         DuelPainter {
             cache,
             font,
-            sub_font: None,
+            sub_font: None.into(),
             main_position: Position::RIGHT,
             diagonal: false,
             pad_around: false,

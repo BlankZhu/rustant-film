@@ -1,6 +1,6 @@
 use clap::Parser;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(
     name = "rustant-film",
     version = "0.1",
@@ -20,6 +20,14 @@ pub struct Arguments {
     #[arg(short, long, default_value = "./logos", help = "path to directory that holds all the logos")]
     pub logos: String,
 
+    /// mode of rustant-film, default is command
+    #[arg(short, long, default_value = "command", help = "working mode of rustant-film, use server mode if set as `server`")]
+    pub mode: String,
+
+    /// port for server mode
+    #[arg(long, default_value = "6400", help = "port for server mode")]
+    pub port: u32,
+
     /// path to directory which stores the origin images
     #[arg(short, long, default_value = "./input", help = "path to directory which stores the origin images")]
     pub input: String,
@@ -29,7 +37,7 @@ pub struct Arguments {
     pub output: String,
 
     /// painter that defines the instant-film layout
-    #[arg(short, long, default_value = None, help = "optional, painter that defines the instant-film layout, use `tri-angular` as default")]
+    #[arg(short, long, default_value = None, help = "optional, painter that defines the instant-film layout, use `triangular` as default")]
     pub painter: Option<String>,
 
     /// whether add all paddings around the image

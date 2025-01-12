@@ -3,7 +3,7 @@ pub mod constant;
 pub mod duel;
 pub mod triangular;
 
-use std::error::Error;
+use std::{error::Error, sync::Arc};
 
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
 use blank::BlankPainter;
@@ -15,7 +15,7 @@ use triangular::TriangularPainter;
 
 use crate::{
     entity::{ExifInfo, Padding, Position},
-    LogoCache,
+    film::LogoCache,
 };
 
 pub trait Painter {
@@ -163,9 +163,9 @@ fn get_text_scaled_length(text: &str, font: &impl Font, scale: &PxScale) -> u32 
 
 pub fn create_painter(
     painter_type: Option<String>,
-    font: FontVec,
-    sub_font: Option<FontVec>,
-    cache: LogoCache,
+    font: Arc<FontVec>,
+    sub_font: Arc<Option<FontVec>>,
+    cache: Arc<LogoCache>,
     main_position: Option<Position>,
     pad_around: bool,
 ) -> Box<dyn Painter> {

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
 use image::{
     imageops::{resize, FilterType},
@@ -18,15 +20,21 @@ use crate::{
 };
 
 pub struct TriangularPainter {
-    cache: LogoCache,
-    font: FontVec,
-    sub_font: Option<FontVec>,
+    cache: Arc<LogoCache>,
+    font: Arc<FontVec>,
+    sub_font: Arc<Option<FontVec>>,
     main_position: Position,
     pad_around: bool,
 }
 
 impl TriangularPainter {
-    pub fn new(cache: LogoCache, font: FontVec, sub_font: Option<FontVec>, main_position: Position, pad_around: bool) -> Self {
+    pub fn new(
+        cache: Arc<LogoCache>,
+        font: Arc<FontVec>,
+        sub_font: Arc<Option<FontVec>>,
+        main_position: Position,
+        pad_around: bool,
+    ) -> Self {
         TriangularPainter {
             cache,
             font,
@@ -36,11 +44,11 @@ impl TriangularPainter {
         }
     }
 
-    pub fn new_normal(cache: LogoCache, font: FontVec) -> Self {
+    pub fn new_normal(cache: Arc<LogoCache>, font: Arc<FontVec>) -> Self {
         TriangularPainter {
             cache,
             font,
-            sub_font: None,
+            sub_font: None.into(),
             main_position: Position::BOTTOM,
             pad_around: true,
         }
@@ -274,7 +282,6 @@ impl TriangularPainter {
                 0 => font,
                 _ => sub_font.as_ref().unwrap_or(font),
             };
-
 
             let mut x = 0;
             let y = index * (scaled_font.height() as u32);
