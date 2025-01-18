@@ -28,8 +28,8 @@ async fn main() {
         let res = server::run(args.clone()).await;
         if let Err(e) = res {
             error!("failed to run in server mode, cause: {}", e);
-            return;
         }
+        return;
     }
     command::run(args);
 }

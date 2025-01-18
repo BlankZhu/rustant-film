@@ -26,8 +26,8 @@ wget https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Olympus_Corporati
 # get om digital solutions logo
 wget https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/OM_Digital_Solutions_Logo.svg/2560px-OM_Digital_Solutions_Logo.svg.png -O './resources/logos/om ditital solutions.png'
 
-# get lumix logo (instead of panasonic)
-wget https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Lumix_logo.svg/2560px-Lumix_logo.svg.png -O ./resources/logos/panasonic.png
+# get panasonic logo (for lumix)
+wget https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Panasonic_logo_%28Blue%29.svg/2560px-Panasonic_logo_%28Blue%29.svg.png -O ./resources/logos/panasonic.png
 
 # get pentax logo...
 wget https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Pentax_Logo.svg/2560px-Pentax_Logo.svg.png -O './resources/logos/pentax.png'

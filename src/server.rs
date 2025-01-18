@@ -1,17 +1,16 @@
-use std::{
-    env,
-    fs::File,
-    io::BufReader,
-};
+use std::io::{BufReader, Cursor};
 
 use axum::{
-    body::Body, extract::{DefaultBodyLimit, Multipart, Query, State}, http::{header, StatusCode}, response::{IntoResponse, Response}, routing::post, Router
+    body::Body,
+    extract::{DefaultBodyLimit, Multipart, Query, State},
+    http::{header, StatusCode},
+    response::{IntoResponse, Response},
+    routing::post,
+    Router,
 };
 use exif::Reader;
-use image::{ImageEncoder, ImageReader};
+use image::ImageEncoder;
 use log::{debug, error, info, warn};
-use tokio::fs;
-use uuid::Uuid;
 
 use crate::{
     api::state::{build_app_state, RustantFilmAppState},
@@ -46,26 +45,19 @@ async fn develop(
         let data = match field.bytes().await {
             Ok(d) => d,
             Err(e) => {
-                error!("failed to accept upload file, cause: {}, {}, {}", e, e.body_text(), e.status());
+                error!(
+                    "failed to accept upload file, cause: {}, {}, {}",
+                    e,
+                    e.body_text(),
+                    e.status()
+                );
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "cannt accept upload file",
-                ).into_response();
+                )
+                    .into_response();
             }
         };
-
-        // save file
-        let filename = format!("{}.rf.tmp.jpg", Uuid::new_v4());
-        let temp_dir = env::temp_dir();
-        let file_path = temp_dir.join(filename);
-        if let Err(e) = fs::write(&file_path, data).await {
-            error!(
-                "failed to save file to {}, cause: {}",
-                file_path.display(),
-                e
-            );
-            return (StatusCode::INTERNAL_SERVER_ERROR, "cannt save upload file").into_response();
-        }
 
         // create painter
         let painter = params.painter;
@@ -80,63 +72,33 @@ async fn develop(
             padding,
         );
 
-        // open the input file
-        let file = match File::open(&file_path) {
-            Ok(f) => f,
-            Err(e) => {
-                error!(
-                    "cannot open input file at {}, cause: {}",
-                    file_path.display(),
-                    e
-                );
-                return (StatusCode::INTERNAL_SERVER_ERROR, "cannt open upload file").into_response();
-            }
-        };
-
         // load exif info
-        let exif = match Reader::new().read_from_container(&mut BufReader::new(&file)) {
+        let cursor = Cursor::new(&data);    // exif::reader::Reader use only the first 4096 bytes, just to lower the memory cost
+        let mut reader = BufReader::new(cursor);
+        let exif = match Reader::new().read_from_container(&mut reader) {
             Ok(exif) => exif,
-            Err(e) => {
-                error!(
-                    "cannot read EXIF from file {}, cause: {}",
-                    file_path.display(),
-                    e
-                );
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "cannt load exif from upload file",
-                ).into_response();
+            Err(err) => {
+                error!("cannot parse EXIF, cause: {}", err);
+                return (StatusCode::BAD_REQUEST, "cannot parse EXIF from file").into_response();
             }
         };
         let exif_info = ExifInfo::new(&exif);
         debug!("exif info: {:?}", exif_info);
 
-        // load input image
-        let image = match ImageReader::open(&file_path) {
-            Ok(f) => f,
-            Err(e) => {
-                error!("cannot read file {}, cause: {}", file_path.display(), e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, "cannt read upload file").into_response();
+        // load input image - which can be asyn
+        let image = match image::load_from_memory(&data) {
+            Ok(image) => image,
+            Err(err) => {
+                error!("cannot read file as image cause: {}", err);
+                return (StatusCode::BAD_REQUEST, "cannot read upload file as iamge")
+                    .into_response();
             }
         };
-        let mut image = match image.decode() {
-            Ok(i) => i.to_rgb8(),
-            Err(e) => {
-                error!(
-                    "cannot decode input image {}, cause: {}",
-                    file_path.display(),
-                    e
-                );
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "cannt decode upload file",
-                ).into_response();
-            }
-        };
+        let mut image = image.to_rgb8();
 
         // draw the image
         if let Err(e) = painter.paint(&mut image, &exif_info) {
-            error!("cannot paint image {}, cause: {}", file_path.display(), e);
+            error!("cannot paint image cause: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, "cannt paint new image").into_response();
         }
 
@@ -151,7 +113,8 @@ async fn develop(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "cannot handle upload image",
-            ).into_response();
+            )
+                .into_response();
         }
 
         let resp = Response::builder()
@@ -166,10 +129,8 @@ async fn develop(
             Ok(r) => r,
             Err(err) => {
                 error!("cannot build response, cause: {}", err);
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "cannot create response",
-                ).into_response();
+                return (StatusCode::INTERNAL_SERVER_ERROR, "cannot create response")
+                    .into_response();
             }
         };
         return resp;
@@ -178,7 +139,8 @@ async fn develop(
     (
         StatusCode::BAD_REQUEST,
         "expted file upload with field name 'image'",
-    ).into_response()
+    )
+        .into_response()
 }
 
 pub async fn run(args: Arguments) -> Result<(), Box<dyn std::error::Error>> {
@@ -190,7 +152,8 @@ pub async fn run(args: Arguments) -> Result<(), Box<dyn std::error::Error>> {
 
     // build app
     let app = Router::new()
-        .route("/api/v1/develop", post(develop)).layer(DefaultBodyLimit::max(1024 * 1024 * 200))
+        .route("/api/v1/develop", post(develop))
+        .layer(DefaultBodyLimit::max(1024 * 1024 * 200))
         .fallback(not_found)
         .with_state(state);
 
