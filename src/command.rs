@@ -1,12 +1,11 @@
 use std::{
     fs::{self, File},
-    io::BufReader,
+    io::{BufReader, Cursor, Read},
     path::Path,
     sync::Arc,
 };
 
 use exif::Reader;
-use image::ImageReader;
 use log::{error, info, warn};
 
 use crate::{
@@ -77,19 +76,28 @@ pub fn run(args: Arguments) {
             continue;
         }
         // open the input file
-        let file = match File::open(&path) {
+        let mut file = match File::open(&path) {
             Ok(f) => f,
             Err(e) => {
                 warn!("cannot open input file at {}, cause: {}", path.display(), e);
                 continue;
             }
         };
+        // read file into data
+        let mut buffer = Vec::new();
+        if let Err(e) = file.read_to_end(&mut buffer) {
+            warn!("cannot read file from {}, cause: {}", path.display(), e);
+            continue;
+        }
+        let data = bytes::Bytes::from(buffer);
+        let cursor = Cursor::new(&data);
+        let mut reader = BufReader::new(cursor);
 
         // load exif info
-        let exif = match Reader::new().read_from_container(&mut BufReader::new(&file)) {
+        let exif = match Reader::new().read_from_container(&mut reader) {
             Ok(exif) => exif,
             Err(e) => {
-                warn!(
+                error!(
                     "cannot read EXIF from file {}, cause: {}",
                     path.display(),
                     e
@@ -101,20 +109,18 @@ pub fn run(args: Arguments) {
         info!("exif info: {:?}", exif_info);
 
         // load input image
-        let image = match ImageReader::open(&path) {
-            Ok(f) => f,
+        let image = match image::load_from_memory(&data) {
+            Ok(image) => image,
             Err(e) => {
-                warn!("cannot read file {}, cause: {}", path.display(), e);
+                error!(
+                    "cannot read file from {} as image, cause: {}",
+                    path.display(),
+                    e
+                );
                 continue;
             }
         };
-        let mut image = match image.decode() {
-            Ok(i) => i.to_rgb8(),
-            Err(e) => {
-                warn!("cannot decode input image {}, cause: {}", path.display(), e);
-                continue;
-            }
-        };
+        let mut image = image.to_rgb8();
 
         // paint the image
         if let Err(e) = painter.paint(&mut image, &exif_info) {

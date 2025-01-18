@@ -16,3 +16,4 @@ log = "0.4.22"
 tokio = { version = "1.43", features = ["full"] }
 axum = { version = "0.8", features = ["multipart", "macros"] }
 serde = { version = "1.0.217", features = ["derive"] }
+bytes = "1.9.0"

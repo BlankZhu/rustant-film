@@ -73,7 +73,7 @@ async fn develop(
         );
 
         // load exif info
-        let cursor = Cursor::new(&data);    // exif::reader::Reader use only the first 4096 bytes, just to lower the memory cost
+        let cursor = Cursor::new(&data);
         let mut reader = BufReader::new(cursor);
         let exif = match Reader::new().read_from_container(&mut reader) {
             Ok(exif) => exif,
@@ -85,7 +85,7 @@ async fn develop(
         let exif_info = ExifInfo::new(&exif);
         debug!("exif info: {:?}", exif_info);
 
-        // load input image - which can be asyn
+        // load input image
         let image = match image::load_from_memory(&data) {
             Ok(image) => image,
             Err(err) => {
