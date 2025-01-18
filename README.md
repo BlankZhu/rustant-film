@@ -60,6 +60,27 @@ Some layout may use a sub-font to get a better look. To use a sub-font, use `--s
 ./rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-SemiBold.ttf --sub-font ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle --pad
 ```
 
+## Server
+
+In addition to the command-line interface, `rustant-film` can also operate as an HTTP server. This allows you to generate and download files via RPC.
+
+To run `rustant-film` in server mode, use the command like:
+
+```shell
+./rustant-film -m server -f ./resources/font/ttf/FiraCode-SemiBold.ttf --sub-font ./resources/font/ttf/FiraCode-Regular.ttf
+```
+
+Once the server is running, you can send requests to the API. For example, to process an image, use the following `curl` command:
+
+```shell
+curl --output result.jpg 'http://0.0.0.0:6400/api/v1/develop?painter=diagonal&pad=false&pos=r' \
+    -X POST \
+    -H "Content-Type: multipart/form-data" \
+    -F 'image=@./test.jpg'
+```
+
+This will generate and return the processed image as `result.jpg`.
+
 ## Roadmap
 
 `rustant-film` aims to implement the following features in future versions:
@@ -68,7 +89,7 @@ Some layout may use a sub-font to get a better look. To use a sub-font, use `--s
 - `Adaptive Layout`: Automatically adjusts the layout for photos with missing EXIF data.
 - `Watermark`: Adds watermarks, including invisible ones, to processed photos.
 - `Copyright Support`: Allows users to add custom copyright information, such as the artist's name, to the final photo.
-- `HTTP API`: Hosts the `rustant-film` command as an HTTP API server, providing both synchronous and asynchronous APIs.
+- `Async HTTP API`: Hosts the `rustant-film` command as an HTTP API server, providing asynchronous APIs.
 - `GUI`: Add a GUI for `rustant-film`, maybe as a new project.
 - `Container Image`: Distributes the `rustant-film` command-line tool and HTTP API as a container image.
 - `Cargo Binary Publishing`: Publishes the `rustant-film` command as a binary on crates.io.
