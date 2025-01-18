@@ -4,7 +4,10 @@ Add an instant-film-style layout to your EXIF photos.
 
 ## Samples
 
-(Example photos with the rustant-film-style layout go here...)
+| index | layout | image |
+|---|---|---|
+| 1 | blank, with paddings | IMG1 |
+| 2 | Diagonal, pos left with paddings | IMG2 |
 
 ## Features
 
