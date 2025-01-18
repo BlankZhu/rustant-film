@@ -1,7 +1,14 @@
 [package]
 name = "rustant-film"
 version = "0.1.0"
+authors = ["BlankZhu"]
 edition = "2021"
+description = "Add a instant film style layout to your photo by EXIF."
+keywords = ["exif", "camera", "image", "film"]
+homepage = "https://github.com/BlankZhu/rustant-film"
+repository = "https://github.com/BlankZhu/rustant-film"
+documentation = "https://docs.rs/rustant-film"
+readme = "README.md"
 
 [dependencies]
 kamadak-exif = "0.6"
