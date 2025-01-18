@@ -90,7 +90,7 @@ async fn develop(
             Ok(image) => image,
             Err(err) => {
                 error!("cannot read file as image cause: {}", err);
-                return (StatusCode::BAD_REQUEST, "cannot read upload file as iamge")
+                return (StatusCode::BAD_REQUEST, "cannot read upload file as image")
                     .into_response();
             }
         };
