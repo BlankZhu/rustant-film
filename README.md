@@ -6,6 +6,13 @@ Add an instant-film-style layout to your EXIF photos.
 
 (Example photos with the rustant-film-style layout go here...)
 
+## Features
+
+- Written in Rust.
+- Provides both command line & server API.
+- Customizable logo & font.
+- Cross-platfrom by cargo.
+
 ## Quick Start
 
 To get started, first compile `rustant-film` using `cargo`:
