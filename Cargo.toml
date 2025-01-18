@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["BlankZhu"]
 edition = "2021"
 description = "Add a instant film style layout to your photo by EXIF."
+license = "Apache-2.0"
 keywords = ["exif", "camera", "image", "film"]
 homepage = "https://github.com/BlankZhu/rustant-film"
 repository = "https://github.com/BlankZhu/rustant-film"
