@@ -34,7 +34,7 @@ Or to build it from source:
 cargo build --release
 ```
 
-It's recommended to clone this repository and go through the next section `From Source` 
+It's recommended to clone this repository and go through the next tutorial section. 
 
 ## Tutorial
 
