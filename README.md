@@ -22,11 +22,23 @@ Add an instant-film-style layout to your EXIF photos.
 
 ## Quick Start
 
-To get started, first compile `rustant-film` using `cargo`:
+To get `rustant-film`, use:
 
+```shell
+cargo install rustant-film
 ```
+
+Or to build it from source: 
+
+```shell
 cargo build --release
 ```
+
+It's recommended to clone this repository and go through the next section `From Source` 
+
+## Tutorial
+
+To get some materials to develop a good image result, you should prepare your own fonts and logos. You can find a example material setup scripts in [setup-example](setup-example)
 
 Then run the following command to setup some essential meterials:
 
@@ -42,7 +54,7 @@ This will generate example fonts, logos, and a sample photo under the `./resourc
 Finally, run the following command:
 
 ```shell
-./target/release/rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-SemiBold.ttf -l ./resources/logos
+rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-SemiBold.ttf -l ./resources/logos
 ```
 
 The output will be saved in the `./output` directory.
@@ -59,19 +71,19 @@ Currently, `rustant-film` supports the following layouts:
 - `diagonal`: A layout like `duel` by display EXIF information on top-left or bottom-right.
 
 ```shell
-./rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle
+rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle
 ```
 
 For a more classic instant film style, add padding around by using flag `-pad`:
 
 ```shell
-./rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle --pad
+rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle --pad
 ```
 
 Some layout may use a sub-font to get a better look. To use a sub-font, use `--sub-font`:
 
 ```shell
-./rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-SemiBold.ttf --sub-font ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle --pad
+rustant-film -i ./resources/samples -o ./output -f ./resources/font/ttf/FiraCode-SemiBold.ttf --sub-font ./resources/font/ttf/FiraCode-Regular.ttf -l ./resources/logos -p triangle --pad
 ```
 
 ## Server
@@ -81,7 +93,7 @@ In addition to the command-line interface, `rustant-film` can also operate as an
 To run `rustant-film` in server mode, use the command like:
 
 ```shell
-./rustant-film -m server -f ./resources/font/ttf/FiraCode-SemiBold.ttf --sub-font ./resources/font/ttf/FiraCode-Regular.ttf
+rustant-film -m server -f ./resources/font/ttf/FiraCode-SemiBold.ttf --sub-font ./resources/font/ttf/FiraCode-Regular.ttf
 ```
 
 Once the server is running, you can send requests to the API. For example, to process an image, use the following `curl` command:
