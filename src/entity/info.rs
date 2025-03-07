@@ -1,4 +1,4 @@
-use std::str::from_utf8;
+use std::{fmt::Display, str::from_utf8};
 
 use exif::{Field, Value};
 
@@ -80,6 +80,24 @@ impl ExifInfo {
             iso,
             datetime,
         }
+    }
+}
+
+impl Display for ExifInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Artist: {}, Lens: {}, Camera Maker: {}, Camera: {}, Aperture: {}, Focal Length: {}, Exposure: {}, ISO: {}, Date: {}",
+            self.artist.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+            self.lens_model.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+            self.camera_maker.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+            self.camera_model.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+            self.aperture.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+            self.focal_length.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+            self.exposure_time.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+            self.iso.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+            self.datetime.as_ref().unwrap_or(&"(None)".to_string()).trim(),
+        )
     }
 }
 

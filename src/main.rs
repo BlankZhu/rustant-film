@@ -8,9 +8,9 @@ pub mod utility;
 
 use argument::Arguments;
 use clap::Parser;
-use log::{error, info};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-fn set_default_log_level() {
+fn setup_normal_logging() {
     std::env::set_var(
         "RUST_LOG",
         std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
@@ -18,18 +18,27 @@ fn set_default_log_level() {
     pretty_env_logger::env_logger::init();
 }
 
+fn setup_tracing() {
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+}
+
 #[tokio::main]
 async fn main() {
     let args = Arguments::parse();
-    set_default_log_level();
-    info!("using input arguments: {:?}", args);
+    println!("using input arguments: {}", args);
 
     if args.mode.to_lowercase() == "server" {
+        setup_tracing();
         let res = server::run(args.clone()).await;
         if let Err(e) = res {
-            error!("failed to run in server mode, cause: {}", e);
+            tracing::error!("failed to run in server mode, cause: {}", e);
         }
         return;
     }
-    command::run(args);
+
+    setup_normal_logging();
+    command::run(args).await;
 }
