@@ -1,16 +1,21 @@
-use std::io::{BufReader, Cursor};
+use std::{
+    io::{BufReader, Cursor},
+    time::Duration,
+};
 
 use axum::{
     body::Body,
-    extract::{DefaultBodyLimit, Multipart, Query, State},
-    http::{header, StatusCode},
+    extract::{DefaultBodyLimit, MatchedPath, Multipart, Query, State},
+    http::{header, Request, StatusCode},
     response::{IntoResponse, Response},
     routing::post,
     Router,
 };
 use exif::Reader;
-use image::ImageEncoder;
-use log::{debug, error, info, warn};
+use image::{codecs::jpeg::JpegEncoder, ColorType, ImageEncoder};
+use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
+use tracing::{debug, error, info, info_span, Span};
 
 use crate::{
     api::state::{build_app_state, RustantFilmAppState},
@@ -26,30 +31,31 @@ async fn not_found() -> impl IntoResponse {
     )
 }
 
+#[tracing::instrument(skip(state, mp))]
 #[axum::debug_handler]
 async fn develop(
     State(state): State<RustantFilmAppState>,
     Query(params): Query<DevelopParams>,
     mut mp: Multipart,
 ) -> Response {
-    info!("got request with params: {:?}", params);
+    info!("handling develop request");
 
     while let Some(field) = mp.next_field().await.unwrap_or(None) {
         let name = field.name().unwrap_or_default().to_string();
         if name != "image" {
-            warn!("skip useless field: {}", name);
+            debug!(name = name, "skip useless field");
             continue;
         }
 
         // read upload file into memory
         let data = match field.bytes().await {
             Ok(d) => d,
-            Err(e) => {
+            Err(err) => {
                 error!(
-                    "failed to accept upload file, cause: {}, {}, {}",
-                    e,
-                    e.body_text(),
-                    e.status()
+                    err_text = err.body_text(),
+                    err_status = err.status().as_u16(),
+                    "failed to accept upload file: {}",
+                    err
                 );
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -83,7 +89,7 @@ async fn develop(
             }
         };
         let exif_info = ExifInfo::new(&exif);
-        debug!("exif info: {:?}", exif_info);
+        debug!(exif_info = ?exif_info, "get exif info from image");
 
         // load input image
         let image = match image::load_from_memory(&data) {
@@ -97,17 +103,17 @@ async fn develop(
         let mut image = image.to_rgb8();
 
         // draw the image
-        if let Err(e) = painter.paint(&mut image, &exif_info) {
-            error!("cannot paint image cause: {}", e);
+        if let Err(err) = painter.paint(&mut image, &exif_info) {
+            error!("cannot paint image cause: {}", err);
             return (StatusCode::INTERNAL_SERVER_ERROR, "cannt paint new image").into_response();
         }
 
         let mut buffer = Vec::new();
-        if let Err(err) = image::codecs::jpeg::JpegEncoder::new(&mut buffer).write_image(
+        if let Err(err) = JpegEncoder::new(&mut buffer).write_image(
             &image,
             image.width(),
             image.height(),
-            image::ColorType::Rgb8.into(),
+            ColorType::Rgb8.into(),
         ) {
             error!("cannot convert new image to bytes, cause: {}", err);
             return (
@@ -144,21 +150,38 @@ async fn develop(
 }
 
 pub async fn run(args: Arguments) -> Result<(), Box<dyn std::error::Error>> {
-    // initialize tracing
-    // tracing_subscriber::fmt::init();
-
-    // get app state
+    // setup app state
     let state = build_app_state(args.logos, args.font, args.sub_font)?;
 
     // build app
     let app = Router::new()
         .route("/api/v1/develop", post(develop))
-        .layer(DefaultBodyLimit::max(1024 * 1024 * 200))
+        .layer(DefaultBodyLimit::max(1024 * 1024 * 200))    // 200MB upload image limit
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &Request<_>| {
+                    // todo: maybe a trace id here
+                    let matched_path = request
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str);
+
+                    info_span!(
+                        "http_request",
+                        method = ?request.method(),
+                        matched_path
+                    )
+                })
+                .on_response(|response: &Response, duration: Duration, _span: &Span| {
+                    info!(status = response.status().as_u16(), duration = ?duration, "response completed");
+                }),
+        )
         .fallback(not_found)
         .with_state(state);
 
     // listen
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
+    debug!(port = args.port, "listening port...");
     axum::serve(listener, app).await?;
 
     Ok(())

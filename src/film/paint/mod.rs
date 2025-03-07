@@ -18,7 +18,7 @@ use crate::{
     film::LogoCache,
 };
 
-pub trait Painter {
+pub trait Painter: Send + Sync {
     fn paint(&self, image: &mut RgbImage, exif_info: &ExifInfo) -> Result<(), Box<dyn Error>>;
 }
 

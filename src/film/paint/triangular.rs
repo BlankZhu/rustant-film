@@ -5,7 +5,7 @@ use image::{
     imageops::{resize, FilterType},
     GenericImage, Rgb, RgbImage,
 };
-use log::debug;
+use log::{debug, trace};
 
 use crate::{
     entity::{ExifInfo, Padding, Position},
@@ -151,7 +151,7 @@ impl TriangularPainter {
         let mut canvas = create_canvas(width, height, background);
 
         // print lines on the left
-        debug!("paint main text to the left");
+        trace!("paint main text to the left");
         let lens_model_text = self.get_lens_model_text(exif_info);
         let camera_model_text = self.get_camera_model_text(exif_info);
         if !lens_model_text.is_empty() || !camera_model_text.is_empty() {
@@ -167,7 +167,7 @@ impl TriangularPainter {
         }
 
         // print lines on the right
-        debug!("paint main text to the right");
+        trace!("paint main text to the right");
         let shooting_parameters_text = self.get_shooting_parameters_text(exif_info);
         let datetime_text = self.get_datetime_text(exif_info);
         let has_text_on_right = !shooting_parameters_text.is_empty() || !datetime_text.is_empty();
@@ -196,7 +196,7 @@ impl TriangularPainter {
         let logo = self.cache.get(logo_name);
         let has_logo_on_right = self.cache.get(logo_name).is_some();
         if has_text_on_right && has_logo_on_right {
-            debug!("paint vertical delimiter to the right");
+            trace!("paint vertical delimiter to the right");
             add_vertical_line(
                 &mut canvas,
                 width - padding.right - right_text_canvas_width - font_scale.y as u32,
@@ -209,7 +209,7 @@ impl TriangularPainter {
         }
 
         // print logo
-        debug!("paint logo to the right");
+        trace!("paint logo to the right");
         if has_logo_on_right {
             let logo = logo.unwrap();
             let (logo_ori_width, logo_ori_height) = logo.dimensions();
@@ -308,51 +308,40 @@ impl Painter for TriangularPainter {
         image: &mut image::RgbImage,
         exif_info: &ExifInfo,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // get concrete values
         let (ori_width, ori_height) = image.dimensions();
         let long_side = std::cmp::max(ori_width, ori_height);
         debug!("origin image width: {}, height: {}", ori_width, ori_height);
 
         // setup padding size
-        let padding_ratio_0 = 1.0 / GOLDEN_RATIO / 16.0;
-        let standard_padding = (long_side as f32 * padding_ratio_0) as u32; // twice of the scaled font height
+        let standard_padding_ratio = 1.0 / GOLDEN_RATIO / 16.0;
+        let standard_padding = (long_side as f32 * standard_padding_ratio) as u32; // twice of the scaled font height
         let main_padding = standard_padding * 3; // 3 times for main
         let mut trivial_padding: u32 = 0;
         if self.pad_around {
             trivial_padding = standard_padding; // 1 times for other
         }
+
+        // prepare font
+        let font_size = standard_padding as f32 * 0.5;
+        let font_scale = PxScale {
+            x: font_size,
+            y: font_size,
+        };
+
+        // create a new main content canvas
+
+        // add padding around the origin image
         let mut padding = Padding::new(
             trivial_padding,
             main_padding,
             trivial_padding,
             trivial_padding,
         );
-
-        // add padding
-        debug!("painting paddings...");
         if self.main_position == Position::TOP {
-            padding = Padding::new(
-                main_padding,
-                trivial_padding,
-                trivial_padding,
-                trivial_padding,
-            );
+            padding.top = main_padding;
+            padding.bottom = trivial_padding;
         }
         add_padding(image, &padding, &WHITE)?;
-
-        // prepare the font
-        let font_size = standard_padding as f32 * 0.5; // for both height & width
-        let font_scale = PxScale {
-            x: font_size,
-            y: font_size,
-        };
-
-        debug!("standard padding size: {}, main padding size: {}, trivial padding size: {}, font size: {}", standard_padding, main_padding, trivial_padding, font_size as u32);
-        debug!(
-            "padded image width: {}, height: {}",
-            ori_width + padding.left + padding.right,
-            ori_height + padding.top + padding.bottom
-        );
 
         // create a new main content canvas
         let main_content_canvas_padding = Padding::new(
