@@ -12,7 +12,7 @@ use crate::{
     argument::Arguments,
     entity::{position, ExifInfo},
     film::{paint::create_painter, LogoCache},
-    utility::{read_font_data, read_sub_font_data},
+    utility::font::{read_font_data, read_sub_font_data},
 };
 
 pub fn run(args: Arguments) {
