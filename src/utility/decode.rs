@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use image::{
     codecs::{
         bmp::BmpDecoder, dds::DdsDecoder, farbfeld::FarbfeldDecoder, gif::GifDecoder,
@@ -11,7 +12,7 @@ use image::{
 };
 use std::io::Cursor;
 
-pub fn get_decoder(bytes: Vec<u8>) -> Result<Box<dyn ImageDecoder>, ImageError> {
+pub fn get_decoder(bytes: Bytes) -> Result<Box<dyn ImageDecoder>, ImageError> {
     let format = image::guess_format(&bytes)?;
     let cursor = Cursor::new(bytes);
 

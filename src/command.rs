@@ -17,7 +17,10 @@ use crate::{
         paint::{create_painter, Painter},
         LogoCache,
     },
-    utility::font::{read_font_data, read_sub_font_data},
+    utility::{
+        decode::get_decoder,
+        font::{read_font_data, read_sub_font_data},
+    },
 };
 
 pub async fn run(args: Arguments) {
@@ -165,4 +168,139 @@ async fn develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: String) 
         error!("cannot save image to {}, cause: {}", output_filename, e);
     }
     info!("new image developed at {}", output_filename);
+}
+
+async fn expr_develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: String) {
+    // open the input file
+    let mut file = match File::open(&path) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("cannot open file at {}, cause: {}", path.display(), e);
+            return;
+        }
+    };
+
+    // read file into bytes data
+    let mut buffer = Vec::new();
+    if let Err(e) = file.read_to_end(&mut buffer) {
+        error!("cannot read file from {}, cause: {}", path.display(), e);
+        return;
+    }
+    let data = Bytes::from(buffer);
+    let cursor = Cursor::new(&data);
+    let mut reader = BufReader::new(cursor);
+
+    // load exif info
+    let exif = match Reader::new().read_from_container(&mut reader) {
+        Ok(exif) => exif,
+        Err(e) => {
+            error!(
+                "cannot read EXIF from file {}, cause: {}",
+                path.display(),
+                e
+            );
+            return;
+        }
+    };
+    let exif_info = ExifInfo::new(&exif);
+    info!("handling exif info: {}", exif_info);
+
+    // create decoder to read image
+    let mut decoder = match get_decoder(data) {
+        Ok(d) => d,
+        Err(e) => {
+            warn!(
+                "cannot get decoder from file {}, cause: {}",
+                path.display(),
+                e
+            );
+            return;
+        }
+    };
+
+    // get the potential ICC
+    let icc_profile = match decoder.icc_profile() {
+        Ok(p) => p,
+        Err(e) => {
+            warn!(
+                "cannot get ICC profile from file {}, cause: {}",
+                path.display(),
+                e
+            );
+            return;
+        }
+    };
+    if icc_profile.is_none() {
+        warn!("no embedding ICC profile in {}", path.display());
+    }
+
+    // decode the image into RgbImage
+    let (width, height) = decoder.dimensions();
+    let color_type = decoder.color_type();
+    if color_type != image::ColorType::Rgb8 {
+        warn!("cannot handle color type {:?}, skipping...", color_type);
+        return;
+    }
+    let total_bytes = decoder.total_bytes() as usize;
+    let mut buffer = vec![0u8; total_bytes];
+    if let Err(e) = decoder.read_image_boxed(&mut buffer) {
+        warn!(
+            "cannot read image from file {}, cause: {}",
+            path.display(),
+            e
+        );
+        return;
+    }
+    let mut image = match image::RgbImage::from_raw(width, height, buffer) {
+        Some(img) => img,
+        None => {
+            warn!("cannot decode image from file {}", path.display());
+            return;
+        }
+    };
+
+    // paint the image
+    if let Err(e) = painter.paint(&mut image, &exif_info) {
+        error!("cannot paint image {}, cause: {}", path.display(), e);
+        return;
+    }
+
+    // prepare to save the image
+    let stem = match path.file_stem() {
+        Some(s) => s.to_string_lossy().to_string(),
+        None => {
+            error!("cannot get stem name from {}", path.display());
+            return;
+        }
+    };
+    let output_filename = format!("{}/{}.jpg", output, stem);
+    let outupt_file = match File::create(&output_filename) {
+        Ok(f) => f,
+        Err(e) => {
+            error!(
+                "cannot create output file at {}, cause: {}",
+                output_filename, e
+            );
+            return;
+        }
+    };
+
+    // create jpeg encoder
+    let mut encoder = image::codecs::jpeg::JpegEncoder::new(&outupt_file);
+    // FIXME: for future image-rs crate version
+    // if let Some(profile) = icc_profile {
+    //     if let Err(e) = encoder.set_icc_profile(&mut encoder, profile) {
+    //         warn!("cannot set ICC profile to output file which may lead to incorrect color, cause: {}", e);
+    //     }
+    // }
+
+    // encode the image into file
+    if let Err(e) = encoder.encode(
+        &image.as_raw(),
+        image.width(),
+        image.height(),
+        color_type.into(),
+    ) {
+        error!("cannot encode image to {}, cause: {}", output_filename, e);
+    }
 }
