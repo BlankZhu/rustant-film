@@ -5,7 +5,7 @@ use log::error;
 
 use crate::{
     film::LogoCache,
-    utility::{read_font_data, read_sub_font_data},
+    utility::font::{read_font_data, read_sub_font_data},
 };
 
 #[derive(Debug, Clone)]

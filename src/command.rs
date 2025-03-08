@@ -17,7 +17,7 @@ use crate::{
         paint::{create_painter, Painter},
         LogoCache,
     },
-    utility::{read_font_data, read_sub_font_data},
+    utility::font::{read_font_data, read_sub_font_data},
 };
 
 pub async fn run(args: Arguments) {
