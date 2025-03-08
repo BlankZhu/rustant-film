@@ -9,10 +9,9 @@ use image::{
     ImageDecoder, ImageError,
     ImageFormat::*,
 };
-use std::{fs, io::Cursor, path::PathBuf};
+use std::io::Cursor;
 
-pub fn get_decoder(path: PathBuf) -> Result<Box<dyn ImageDecoder>, ImageError> {
-    let bytes = fs::read(&path)?;
+pub fn get_decoder(bytes: Vec<u8>) -> Result<Box<dyn ImageDecoder>, ImageError> {
     let format = image::guess_format(&bytes)?;
     let cursor = Cursor::new(bytes);
 
