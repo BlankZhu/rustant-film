@@ -92,17 +92,6 @@ async fn develop(
         let exif_info = ExifInfo::new(&exif);
         debug!(exif_info = ?exif_info, "get exif info from image");
 
-        // load exif info
-        let exif = match Reader::new().read_from_container(&mut reader) {
-            Ok(exif) => exif,
-            Err(e) => {
-                error!("cannot read EXIF cause: {}", e);
-                continue;
-            }
-        };
-        let exif_info = ExifInfo::new(&exif);
-        info!("handling exif info: {}", exif_info);
-
         // create decoder to read image
         let mut decoder = match get_decoder(data) {
             Ok(d) => d,
@@ -195,7 +184,7 @@ async fn develop(
 
     (
         StatusCode::BAD_REQUEST,
-        "expted file upload with field name 'image'",
+        "expect file upload with field name 'image'",
     )
         .into_response()
 }
