@@ -7,6 +7,7 @@ use std::{
 
 use bytes::Bytes;
 use exif::Reader;
+use image::ImageEncoder;
 use log::{debug, error, info, warn};
 use tokio::task;
 
@@ -217,12 +218,11 @@ async fn develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: String) 
 
     // create jpeg encoder
     let mut encoder = image::codecs::jpeg::JpegEncoder::new(&outupt_file);
-    // FIXME: for future image-rs crate version
-    // if let Some(profile) = icc_profile {
-    //     if let Err(e) = encoder.set_icc_profile(&mut encoder, profile) {
-    //         warn!("cannot set ICC profile to output file which may lead to incorrect color, cause: {}", e);
-    //     }
-    // }
+    if let Some(profile) = icc_profile {
+        if let Err(e) = encoder.set_icc_profile(profile) {
+            warn!("cannot set ICC profile to output file which may lead to incorrect color, cause: {}", e);
+        }
+    }
 
     // encode the image into file
     if let Err(e) = encoder.encode(

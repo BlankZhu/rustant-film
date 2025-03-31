@@ -12,11 +12,10 @@ use axum::{
     Router,
 };
 use exif::Reader;
-use image::{codecs::jpeg::JpegEncoder, ColorType, ImageEncoder};
-use log::warn;
+use image::ImageEncoder;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing::{debug, error, info, info_span, Span};
+use tracing::{debug, error, info, info_span, warn, Span};
 
 use crate::{
     api::state::{build_app_state, RustantFilmAppState},
@@ -152,12 +151,20 @@ async fn develop(
             return (StatusCode::INTERNAL_SERVER_ERROR, "cannt paint new image").into_response();
         }
 
+        // create jpeg encoder
         let mut buffer = Vec::new();
-        if let Err(err) = JpegEncoder::new(&mut buffer).write_image(
-            &image,
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new(&mut buffer);
+        if let Some(profile) = icc_profile {
+            if let Err(e) = encoder.set_icc_profile(profile) {
+                warn!("cannot set ICC profile to output file which may lead to incorrect color, cause: {}", e);
+            }
+        }
+
+        if let Err(err) = encoder.encode(
+            &image.as_raw(),
             image.width(),
             image.height(),
-            ColorType::Rgb8.into(),
+            color_type.into(),
         ) {
             error!("cannot convert new image to bytes, cause: {}", err);
             return (
