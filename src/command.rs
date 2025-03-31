@@ -7,7 +7,7 @@ use std::{
 
 use bytes::Bytes;
 use exif::Reader;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use tokio::task;
 
 use crate::{
@@ -17,7 +17,10 @@ use crate::{
         paint::{create_painter, Painter},
         LogoCache,
     },
-    utility::{read_font_data, read_sub_font_data},
+    utility::{
+        decode::get_decoder,
+        font::{read_font_data, read_sub_font_data},
+    },
 };
 
 pub async fn run(args: Arguments) {
@@ -130,21 +133,61 @@ async fn develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: String) 
         }
     };
     let exif_info = ExifInfo::new(&exif);
-    info!("handling exif info: {}", exif_info); // fixme: implement a display trait for it
+    info!("handling exif info: {}", exif_info);
 
-    // load input image
-    let image = match image::load_from_memory(&data) {
-        Ok(image) => image,
+    // create decoder to read image
+    let mut decoder = match get_decoder(data) {
+        Ok(d) => d,
         Err(e) => {
-            error!(
-                "cannot read file from {} as image, cause: {}",
+            warn!(
+                "cannot get decoder from file {}, cause: {}",
                 path.display(),
                 e
             );
             return;
         }
     };
-    let mut image = image.to_rgb8();
+
+    // get the potential ICC
+    let icc_profile = match decoder.icc_profile() {
+        Ok(p) => p,
+        Err(e) => {
+            warn!(
+                "cannot get ICC profile from file {}, cause: {}",
+                path.display(),
+                e
+            );
+            return;
+        }
+    };
+    if icc_profile.is_none() {
+        debug!("no embedding ICC profile in {}", path.display());
+    }
+
+    // decode the image into RgbImage
+    let (width, height) = decoder.dimensions();
+    let color_type = decoder.color_type();
+    if color_type != image::ColorType::Rgb8 {
+        warn!("cannot handle color type {:?}, skipping...", color_type);
+        return;
+    }
+    let total_bytes = decoder.total_bytes() as usize;
+    let mut buffer = vec![0u8; total_bytes];
+    if let Err(e) = decoder.read_image_boxed(&mut buffer) {
+        warn!(
+            "cannot read image from file {}, cause: {}",
+            path.display(),
+            e
+        );
+        return;
+    }
+    let mut image = match image::RgbImage::from_raw(width, height, buffer) {
+        Some(img) => img,
+        None => {
+            warn!("cannot decode image from file {}", path.display());
+            return;
+        }
+    };
 
     // paint the image
     if let Err(e) = painter.paint(&mut image, &exif_info) {
@@ -152,7 +195,7 @@ async fn develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: String) 
         return;
     }
 
-    // save the image
+    // prepare to save the image
     let stem = match path.file_stem() {
         Some(s) => s.to_string_lossy().to_string(),
         None => {
@@ -161,8 +204,33 @@ async fn develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: String) 
         }
     };
     let output_filename = format!("{}/{}.jpg", output, stem);
-    if let Err(e) = image.save(&output_filename) {
-        error!("cannot save image to {}, cause: {}", output_filename, e);
+    let outupt_file = match File::create(&output_filename) {
+        Ok(f) => f,
+        Err(e) => {
+            error!(
+                "cannot create output file at {}, cause: {}",
+                output_filename, e
+            );
+            return;
+        }
+    };
+
+    // create jpeg encoder
+    let mut encoder = image::codecs::jpeg::JpegEncoder::new(&outupt_file);
+    // FIXME: for future image-rs crate version
+    // if let Some(profile) = icc_profile {
+    //     if let Err(e) = encoder.set_icc_profile(&mut encoder, profile) {
+    //         warn!("cannot set ICC profile to output file which may lead to incorrect color, cause: {}", e);
+    //     }
+    // }
+
+    // encode the image into file
+    if let Err(e) = encoder.encode(
+        &image.as_raw(),
+        image.width(),
+        image.height(),
+        color_type.into(),
+    ) {
+        error!("cannot encode image to {}, cause: {}", output_filename, e);
     }
-    info!("new image developed at {}", output_filename);
 }

@@ -13,6 +13,7 @@ use axum::{
 };
 use exif::Reader;
 use image::{codecs::jpeg::JpegEncoder, ColorType, ImageEncoder};
+use log::warn;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, info_span, Span};
@@ -22,6 +23,7 @@ use crate::{
     argument::Arguments,
     entity::{position, DevelopParams, ExifInfo},
     film::paint::create_painter,
+    utility::decode::get_decoder,
 };
 
 async fn not_found() -> impl IntoResponse {
@@ -66,14 +68,14 @@ async fn develop(
         };
 
         // create painter
-        let painter = params.painter;
-        let position = position::from_str(params.pos.unwrap_or("".to_string()).as_str());
+        let painter = params.painter.clone();
+        let position = position::from_str(params.pos.clone().unwrap_or("".to_string()).as_str());
         let padding = params.pad.unwrap_or(false);
         let painter = create_painter(
             painter,
-            state.font,
-            state.sub_font,
-            state.logos,
+            state.font.clone(),
+            state.sub_font.clone(),
+            state.logos.clone(),
             position,
             padding,
         );
@@ -91,16 +93,58 @@ async fn develop(
         let exif_info = ExifInfo::new(&exif);
         debug!(exif_info = ?exif_info, "get exif info from image");
 
-        // load input image
-        let image = match image::load_from_memory(&data) {
-            Ok(image) => image,
-            Err(err) => {
-                error!("cannot read file as image cause: {}", err);
-                return (StatusCode::BAD_REQUEST, "cannot read upload file as image")
-                    .into_response();
+        // load exif info
+        let exif = match Reader::new().read_from_container(&mut reader) {
+            Ok(exif) => exif,
+            Err(e) => {
+                error!("cannot read EXIF cause: {}", e);
+                continue;
             }
         };
-        let mut image = image.to_rgb8();
+        let exif_info = ExifInfo::new(&exif);
+        info!("handling exif info: {}", exif_info);
+
+        // create decoder to read image
+        let mut decoder = match get_decoder(data) {
+            Ok(d) => d,
+            Err(e) => {
+                warn!("cannot get decoder cause: {}", e);
+                continue;
+            }
+        };
+
+        // get the potential ICC
+        let icc_profile = match decoder.icc_profile() {
+            Ok(p) => p,
+            Err(e) => {
+                warn!("cannot get ICC profile cause: {}", e);
+                continue;
+            }
+        };
+        if icc_profile.is_none() {
+            debug!("no embedding ICC profile");
+        }
+
+        // decode the image into RgbImage
+        let (width, height) = decoder.dimensions();
+        let color_type = decoder.color_type();
+        if color_type != image::ColorType::Rgb8 {
+            warn!("cannot handle color type {:?}, skipping...", color_type);
+            continue;
+        }
+        let total_bytes = decoder.total_bytes() as usize;
+        let mut buffer = vec![0u8; total_bytes];
+        if let Err(e) = decoder.read_image_boxed(&mut buffer) {
+            warn!("cannot read image, cause: {}", e);
+            continue;
+        }
+        let mut image = match image::RgbImage::from_raw(width, height, buffer) {
+            Some(img) => img,
+            None => {
+                warn!("cannot decode image");
+                continue;
+            }
+        };
 
         // draw the image
         if let Err(err) = painter.paint(&mut image, &exif_info) {
