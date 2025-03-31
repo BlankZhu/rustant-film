@@ -7,7 +7,7 @@ use std::{
 
 use bytes::Bytes;
 use exif::Reader;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use tokio::task;
 
 use crate::{
@@ -133,76 +133,6 @@ async fn develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: String) 
         }
     };
     let exif_info = ExifInfo::new(&exif);
-    info!("handling exif info: {}", exif_info); // fixme: implement a display trait for it
-
-    // load input image
-    let image = match image::load_from_memory(&data) {
-        Ok(image) => image,
-        Err(e) => {
-            error!(
-                "cannot read file from {} as image, cause: {}",
-                path.display(),
-                e
-            );
-            return;
-        }
-    };
-    let mut image = image.to_rgb8();
-
-    // paint the image
-    if let Err(e) = painter.paint(&mut image, &exif_info) {
-        error!("cannot paint image {}, cause: {}", path.display(), e);
-        return;
-    }
-
-    // save the image
-    let stem = match path.file_stem() {
-        Some(s) => s.to_string_lossy().to_string(),
-        None => {
-            error!("cannot get stem name from {}", path.display());
-            return;
-        }
-    };
-    let output_filename = format!("{}/{}.jpg", output, stem);
-    if let Err(e) = image.save(&output_filename) {
-        error!("cannot save image to {}, cause: {}", output_filename, e);
-    }
-    info!("new image developed at {}", output_filename);
-}
-
-async fn expr_develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: String) {
-    // open the input file
-    let mut file = match File::open(&path) {
-        Ok(f) => f,
-        Err(e) => {
-            error!("cannot open file at {}, cause: {}", path.display(), e);
-            return;
-        }
-    };
-
-    // read file into bytes data
-    let mut buffer = Vec::new();
-    if let Err(e) = file.read_to_end(&mut buffer) {
-        error!("cannot read file from {}, cause: {}", path.display(), e);
-        return;
-    }
-    let data = Bytes::from(buffer);
-    let cursor = Cursor::new(&data);
-    let mut reader = BufReader::new(cursor);
-
-    // load exif info
-    let exif = match Reader::new().read_from_container(&mut reader) {
-        Ok(exif) => exif,
-        Err(e) => {
-            error!(
-                "cannot read EXIF from file {}, cause: {}",
-                path.display(),
-                e
-            );
-            return;
-        }
-    };
-    let exif_info = ExifInfo::new(&exif);
     info!("handling exif info: {}", exif_info);
 
     // create decoder to read image
@@ -231,7 +161,7 @@ async fn expr_develop(path: PathBuf, painter: Arc<Box<dyn Painter>>, output: Str
         }
     };
     if icc_profile.is_none() {
-        warn!("no embedding ICC profile in {}", path.display());
+        debug!("no embedding ICC profile in {}", path.display());
     }
 
     // decode the image into RgbImage
