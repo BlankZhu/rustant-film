@@ -1,6 +1,6 @@
 [package]
 name = "rustant-film"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["BlankZhu"]
 edition = "2021"
 description = "Add a instant film style layout to your photo by EXIF."
