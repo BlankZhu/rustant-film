@@ -1,22 +1,28 @@
-use std::io::{BufReader, Cursor};
+use std::{
+    io::{BufReader, Cursor},
+    time::Duration,
+};
 
 use axum::{
     body::Body,
-    extract::{DefaultBodyLimit, Multipart, Query, State},
-    http::{header, StatusCode},
+    extract::{DefaultBodyLimit, MatchedPath, Multipart, Query, State},
+    http::{header, Request, StatusCode},
     response::{IntoResponse, Response},
     routing::post,
     Router,
 };
 use exif::Reader;
 use image::ImageEncoder;
-use log::{debug, error, info, warn};
+use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
+use tracing::{debug, error, info, info_span, warn, Span};
 
 use crate::{
     api::state::{build_app_state, RustantFilmAppState},
     argument::Arguments,
     entity::{position, DevelopParams, ExifInfo},
     film::paint::create_painter,
+    utility::decode::get_decoder,
 };
 
 async fn not_found() -> impl IntoResponse {
@@ -26,30 +32,31 @@ async fn not_found() -> impl IntoResponse {
     )
 }
 
+#[tracing::instrument(skip(state, mp))]
 #[axum::debug_handler]
 async fn develop(
     State(state): State<RustantFilmAppState>,
     Query(params): Query<DevelopParams>,
     mut mp: Multipart,
 ) -> Response {
-    info!("got request with params: {:?}", params);
+    info!("handling develop request");
 
     while let Some(field) = mp.next_field().await.unwrap_or(None) {
         let name = field.name().unwrap_or_default().to_string();
         if name != "image" {
-            warn!("skip useless field: {}", name);
+            debug!(name = name, "skip useless field");
             continue;
         }
 
         // read upload file into memory
         let data = match field.bytes().await {
             Ok(d) => d,
-            Err(e) => {
+            Err(err) => {
                 error!(
-                    "failed to accept upload file, cause: {}, {}, {}",
-                    e,
-                    e.body_text(),
-                    e.status()
+                    err_text = err.body_text(),
+                    err_status = err.status().as_u16(),
+                    "failed to accept upload file: {}",
+                    err
                 );
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -60,14 +67,14 @@ async fn develop(
         };
 
         // create painter
-        let painter = params.painter;
-        let position = position::from_str(params.pos.unwrap_or("".to_string()).as_str());
+        let painter = params.painter.clone();
+        let position = position::from_str(params.pos.clone().unwrap_or("".to_string()).as_str());
         let padding = params.pad.unwrap_or(false);
         let painter = create_painter(
             painter,
-            state.font,
-            state.sub_font,
-            state.logos,
+            state.font.clone(),
+            state.sub_font.clone(),
+            state.logos.clone(),
             position,
             padding,
         );
@@ -83,31 +90,81 @@ async fn develop(
             }
         };
         let exif_info = ExifInfo::new(&exif);
-        debug!("exif info: {:?}", exif_info);
+        debug!(exif_info = ?exif_info, "get exif info from image");
 
-        // load input image
-        let image = match image::load_from_memory(&data) {
-            Ok(image) => image,
-            Err(err) => {
-                error!("cannot read file as image cause: {}", err);
-                return (StatusCode::BAD_REQUEST, "cannot read upload file as image")
-                    .into_response();
+        // load exif info
+        let exif = match Reader::new().read_from_container(&mut reader) {
+            Ok(exif) => exif,
+            Err(e) => {
+                error!("cannot read EXIF cause: {}", e);
+                continue;
             }
         };
-        let mut image = image.to_rgb8();
+        let exif_info = ExifInfo::new(&exif);
+        info!("handling exif info: {}", exif_info);
+
+        // create decoder to read image
+        let mut decoder = match get_decoder(data) {
+            Ok(d) => d,
+            Err(e) => {
+                warn!("cannot get decoder cause: {}", e);
+                continue;
+            }
+        };
+
+        // get the potential ICC
+        let icc_profile = match decoder.icc_profile() {
+            Ok(p) => p,
+            Err(e) => {
+                warn!("cannot get ICC profile cause: {}", e);
+                continue;
+            }
+        };
+        if icc_profile.is_none() {
+            debug!("no embedding ICC profile");
+        }
+
+        // decode the image into RgbImage
+        let (width, height) = decoder.dimensions();
+        let color_type = decoder.color_type();
+        if color_type != image::ColorType::Rgb8 {
+            warn!("cannot handle color type {:?}, skipping...", color_type);
+            continue;
+        }
+        let total_bytes = decoder.total_bytes() as usize;
+        let mut buffer = vec![0u8; total_bytes];
+        if let Err(e) = decoder.read_image_boxed(&mut buffer) {
+            warn!("cannot read image, cause: {}", e);
+            continue;
+        }
+        let mut image = match image::RgbImage::from_raw(width, height, buffer) {
+            Some(img) => img,
+            None => {
+                warn!("cannot decode image");
+                continue;
+            }
+        };
 
         // draw the image
-        if let Err(e) = painter.paint(&mut image, &exif_info) {
-            error!("cannot paint image cause: {}", e);
+        if let Err(err) = painter.paint(&mut image, &exif_info) {
+            error!("cannot paint image cause: {}", err);
             return (StatusCode::INTERNAL_SERVER_ERROR, "cannt paint new image").into_response();
         }
 
+        // create jpeg encoder
         let mut buffer = Vec::new();
-        if let Err(err) = image::codecs::jpeg::JpegEncoder::new(&mut buffer).write_image(
-            &image,
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new(&mut buffer);
+        if let Some(profile) = icc_profile {
+            if let Err(e) = encoder.set_icc_profile(profile) {
+                warn!("cannot set ICC profile to output file which may lead to incorrect color, cause: {}", e);
+            }
+        }
+
+        if let Err(err) = encoder.encode(
+            &image.as_raw(),
             image.width(),
             image.height(),
-            image::ColorType::Rgb8.into(),
+            color_type.into(),
         ) {
             error!("cannot convert new image to bytes, cause: {}", err);
             return (
@@ -144,21 +201,38 @@ async fn develop(
 }
 
 pub async fn run(args: Arguments) -> Result<(), Box<dyn std::error::Error>> {
-    // initialize tracing
-    // tracing_subscriber::fmt::init();
-
-    // get app state
+    // setup app state
     let state = build_app_state(args.logos, args.font, args.sub_font)?;
 
     // build app
     let app = Router::new()
         .route("/api/v1/develop", post(develop))
-        .layer(DefaultBodyLimit::max(1024 * 1024 * 200))
+        .layer(DefaultBodyLimit::max(1024 * 1024 * 200))    // 200MB upload image limit
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &Request<_>| {
+                    // todo: maybe a trace id here
+                    let matched_path = request
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str);
+
+                    info_span!(
+                        "http_request",
+                        method = ?request.method(),
+                        matched_path
+                    )
+                })
+                .on_response(|response: &Response, duration: Duration, _span: &Span| {
+                    info!(status = response.status().as_u16(), duration = ?duration, "response completed");
+                }),
+        )
         .fallback(not_found)
         .with_state(state);
 
     // listen
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", args.port)).await?;
+    debug!(port = args.port, "listening port...");
     axum::serve(listener, app).await?;
 
     Ok(())

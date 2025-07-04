@@ -1,6 +1,9 @@
-use clap::Parser;
+use std::fmt::Display;
 
-#[derive(Parser, Debug, Clone)]
+use clap::Parser;
+use serde::{Deserialize, Serialize};
+
+#[derive(Parser, Debug, Clone, Serialize, Deserialize)]
 #[command(
     name = "rustant-film",
     version = "0.1",
@@ -41,10 +44,29 @@ pub struct Arguments {
     pub painter: Option<String>,
 
     /// whether add all paddings around the image
-    #[arg(long = "pos", default_value = None, help = "optional, where to paint the description content, use [ top/ bottom / left / right / middle ] (t/b/l/r/m for short). For some special painter this won't work, and different painter has their own implementation.")]
+    #[arg(long = "pos", default_value = None, help = "optional, where to paint the description content, use [top/bottom/left/right/middle] (t/b/l/r/m for short). For some special painter this won't work, and different painter has their own implementation.")]
     pub position: Option<String>,
 
     /// whether add all paddings around the image
     #[arg(long = "pad", action = clap::ArgAction::SetTrue, help = "whether add paddings around the image")]
     pub padding: bool,
+}
+
+impl Display for Arguments {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Font: {}, Sub-Font: {}, Logos: {}, mode: {}, port: {}, input: {}, output: {}, painter: {}, position: {}, padding: {}",
+            self.font.as_str(),
+            self.sub_font.as_ref().unwrap_or(&"(None)".to_string()),
+            self.logos.as_str(),
+            self.mode.as_str(),
+            self.port,
+            self.input.as_str(),
+            self.output.as_str(),
+            self.painter.as_ref().unwrap_or(&"(None)".to_string()),
+            self.position.as_ref().unwrap_or(&"(None)".to_string()),
+            self.padding,
+        )
+    }
 }

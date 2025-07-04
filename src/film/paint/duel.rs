@@ -5,7 +5,7 @@ use image::{
     imageops::{resize, FilterType},
     GenericImage, Rgb, RgbImage,
 };
-use log::debug;
+use log::{debug, trace};
 
 use crate::{
     entity::{ExifInfo, Padding, Position},
@@ -176,7 +176,7 @@ impl DuelPainter {
         // print logo
         let mut curr_y: u32 = 0;
         if logo.is_some() {
-            debug!("paint logo in at top");
+            trace!("paint logo in at top");
             let logo: RgbImage =
                 resize(logo.unwrap(), logo_width, logo_height, FilterType::Lanczos3);
             let x = (canvas_width - logo_width) / 2;
@@ -188,7 +188,7 @@ impl DuelPainter {
         curr_y += base_scale.y as u32;
 
         // print lines
-        debug!("paint lines one by one");
+        trace!("paint lines one by one");
         let mut index = 0;
         for line in lines {
             if line.is_empty() {
@@ -307,15 +307,13 @@ impl Painter for DuelPainter {
         };
 
         debug!(
-            "new image width: {}, height: {}",
+            "new image width: {}, height: {}; main content width: {}, height: {}, copy to [{}, {}]",
             image.width(),
-            image.width()
-        );
-        debug!("copy to x: {}, y: {}", copy_to_x, copy_to_y);
-        debug!(
-            "main content width: {}, height: {}",
+            image.height(),
             main_content_canvas.width(),
-            main_content_canvas.height()
+            main_content_canvas.height(),
+            copy_to_x,
+            copy_to_y
         );
         image.copy_from(&main_content_canvas, copy_to_x, copy_to_y)?;
 
